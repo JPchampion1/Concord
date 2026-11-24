@@ -28,7 +28,7 @@ button{cursor:pointer;border:0}
 .card .sub{margin:0 0 20px;text-align:center;color:var(--mut)}
 .card label{display:block;margin:16px 0 8px;font-size:12px;font-weight:700;color:#b5bac1;text-transform:uppercase}
 .card input{width:100%;height:40px;padding:10px;border:0;border-radius:3px;background:var(--inp)}
-.link{background:none;color:#7fd33a;padding:0;font-size:14px}
+.link{background:none;color:var(--brand);padding:0;font-size:14px}
 .link:hover{text-decoration:underline}
 .btn{width:100%;height:44px;margin-top:20px;border-radius:3px;background:var(--brand);color:#0b1a02;font-weight:600;transition:background-color .17s}
 .btn:hover{background:var(--brand-h)}
@@ -113,7 +113,7 @@ button{cursor:pointer;border:0}
 .b2.lnk{background:none}.b2.lnk:hover{text-decoration:underline}
 .copy{display:flex;gap:8px}.copy input{flex:1}
 /* ---------- CONVITE POR LINK ---------- */
-.tx a{color:#7fd33a;text-decoration:none}
+.tx a{color:var(--brand);text-decoration:none}
 .tx a:hover{text-decoration:underline}
 .inv{margin-top:8px;max-width:432px;padding:16px;border:1px solid #232428;border-radius:8px;background:var(--bg2)}
 .md .inv{margin:0 0 4px;background:var(--bg3);max-width:none}
@@ -191,7 +191,7 @@ button{cursor:pointer;border:0}
 .rqb:hover{color:var(--txt)}.rqb.ok:hover{background:var(--brand);color:#0b1a02}
 .at{display:flex;align-items:center;gap:8px;height:40px;padding:0 10px;border-radius:3px;background:var(--inp)}
 .at b{color:var(--mut)}.md .at input{height:100%;padding:0;background:none}
-.ok2{color:#7fd33a}
+.ok2{color:var(--brand)}
 body[data-req]:not([data-req="0"]) #homeBtn::after{content:"";position:absolute;right:-2px;top:-2px;width:12px;height:12px;border-radius:50%;background:var(--err);border:3px solid var(--bg1);box-sizing:content-box}
 /* ---------- STATUS ---------- */
 #meSt{cursor:pointer}#meSt:hover{text-decoration:underline;color:var(--txt)}
@@ -207,6 +207,41 @@ body[data-req]:not([data-req="0"]) #homeBtn::after{content:"";position:absolute;
 .opt.on{border-color:var(--brand)}
 .stt{display:flex;flex-direction:column;font-weight:500}
 .stt small{font-weight:400;font-size:12px;color:var(--mut)}
+/* ---------- CONFIGURAÇÕES ---------- */
+body[data-theme="black"]{--bg1:#000;--bg2:#0b0b0c;--bg3:#111113;--hov:#1b1b1e;--inp:#000}
+#settings{position:fixed;inset:0;z-index:9;display:flex;background:var(--bg3)}
+#settings nav{width:260px;flex:none;display:flex;flex-direction:column;gap:2px;padding:48px 12px 16px;overflow-y:auto;background:var(--bg2)}
+#settings nav h3{margin:8px 10px;font-size:12px;text-transform:uppercase;color:var(--mut)}
+.sn{padding:8px 10px;border-radius:4px;background:none;color:var(--mut);text-align:left;font-weight:500}
+.b2.sn,.b2.th{height:auto}
+.sn:hover{background:var(--hov);color:var(--txt)}.sn.on{background:#404249;color:#fff}.sn.red{color:var(--err);margin-top:8px}
+#settings section{flex:1;min-width:0;overflow-y:auto;padding:48px 40px}
+.sc{max-width:660px}.sc h1{margin:0 0 12px;font-size:20px}.sc h1+.sr{border-top:1px solid var(--bg1)}.sc .sr+h1{margin-top:32px}
+.sr{display:flex;align-items:center;gap:12px;padding:14px 0;border-bottom:1px solid var(--bg1)}
+.sr .lbl{flex:1;min-width:0}.sr .lbl b{display:block;font-weight:600}.sr .lbl small{display:block;margin-top:2px;font-size:13px;color:var(--mut)}
+.sr .val{max-width:40%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sx{position:fixed;top:12px;right:16px;width:36px;height:36px;border-radius:50%;border:2px solid var(--mut);background:none;color:var(--mut);font-size:16px}
+.sx:hover{color:var(--txt);border-color:var(--txt)}
+.sw{position:relative;width:40px;height:24px;flex:none}
+.sw input{position:absolute;inset:0;width:100%;height:100%;margin:0;opacity:0;cursor:pointer;z-index:1}
+.sw i{position:absolute;inset:0;border-radius:12px;background:#80848e;transition:background-color .17s}
+.sw i::after{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;transition:left .17s}
+.sw input:checked+i{background:var(--brand)}.sw input:checked+i::after{left:19px}
+.swatches{display:flex;gap:10px;flex-wrap:wrap}
+.swt{width:36px;height:36px;border-radius:50%;border:3px solid transparent;background-clip:padding-box;box-shadow:0 0 0 0 var(--txt)}
+.swt.on{border-color:var(--bg3);box-shadow:0 0 0 2px var(--txt)}
+.themes{display:flex;gap:12px}
+.th{flex:1;padding:14px;border-radius:8px;border:2px solid #3f4147;background:var(--bg2);text-align:left;font-weight:500}
+.th.on{border-color:var(--brand)}
+#settings input[type=range]{width:200px;accent-color:var(--brand)}
+@media(max-width:700px){
+  #settings{flex-direction:column}
+  #settings nav{width:auto;flex-direction:row;gap:4px;overflow-x:auto;padding:calc(8px + env(safe-area-inset-top,0px)) 56px 8px 8px}
+  #settings nav h3{display:none}.sn,.sn.red{white-space:nowrap;margin:0}
+  #settings section{padding:12px 16px calc(24px + env(safe-area-inset-bottom,0px))}
+  .sx{top:calc(8px + env(safe-area-inset-top,0px));right:10px}
+  .sr .val{max-width:34%}#settings input[type=range]{width:120px}
+}
 /* ---------- CELULAR / TABLET ---------- */
 #top{display:contents}
 #navBtn,#memBtn{display:none;width:40px;height:40px;flex:none;border-radius:8px;background:none;color:var(--mut);font-size:22px;line-height:1}
@@ -277,6 +312,7 @@ body[data-req]:not([data-req="0"]) #homeBtn::after{content:"";position:absolute;
     <div id="me">
       <div class="av" id="meAv"><span class="dot"></span></div>
       <div class="nm"><span id="meName"></span><small id="meSt" title="Mudar status">Online</small></div>
+      <button id="setBtn" title="Configurações" aria-label="Configurações">⚙</button>
       <button id="logout" title="Sair">Sair</button>
     </div>
   </aside>
@@ -288,12 +324,13 @@ body[data-req]:not([data-req="0"]) #homeBtn::after{content:"";position:absolute;
   <aside id="members"></aside>
 </div>
 
+<div id="settings" class="hidden"></div>
 <div id="scrim"></div>
 <div id="ov" class="hidden"></div>
 
 <script type="module">
 import {initializeApp} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
-import {getAuth,onAuthStateChanged,signInWithEmailAndPassword,createUserWithEmailAndPassword,updateProfile,signOut,sendPasswordResetEmail} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
+import {getAuth,onAuthStateChanged,signInWithEmailAndPassword,createUserWithEmailAndPassword,updateProfile,signOut,sendPasswordResetEmail,reauthenticateWithCredential,EmailAuthProvider,updatePassword,verifyBeforeUpdateEmail} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
 import {getDatabase,ref,push,set,get,update,onValue,onChildAdded,query,limitToLast,onDisconnect,remove} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js";
 
 const app=initializeApp({
@@ -369,7 +406,7 @@ $('authForm').onsubmit=async ev=>{
 };
 $('logout').onclick=()=>signOut(auth);
 $('meSt').onclick=e=>{e.stopPropagation();statusView()};
-$('me').onclick=e=>{if(!e.target.closest('#logout'))profileView(me.uid)};
+$('me').onclick=e=>{if(!e.target.closest('#logout,#setBtn'))profileView(me.uid)};
 
 /* ---------- Estado ---------- */
 let inviteParam=new URLSearchParams(location.search).get('convite');
@@ -601,6 +638,7 @@ async function requestTo(uid){
   if(uid===me.uid)throw 'Você não pode adicionar a si mesmo.';
   if(friendList[uid])throw 'Vocês já são amigos.';
   if(reqList[uid]){await acceptRequest(uid);return 'accepted'}
+  if((await get(ref(db,'users/'+uid+'/allowRequests'))).val()===false)throw 'Essa pessoa não aceita pedidos de amizade.';
   await set(ref(db,'friendRequests/'+uid+'/'+me.uid),{name:myName(),username:myUser,ts:Date.now()});
   return 'sent';
 }
@@ -858,6 +896,7 @@ function addMsg(m){
   const [tx,inv]=richText(m.text||'');if(m.text)bd.append(tx);if(inv)bd.append(inviteCard(inv));if(m.img)bd.append(picBox(m));
   row.append(bd);box.append(row);
   last=m;if(stick||m.uid===me.uid)box.scrollTop=box.scrollHeight;
+  if(m.uid!==me.uid&&document.hidden&&P.notif&&myStatus!=='dnd'&&Date.now()-(m.ts||0)<8000&&'Notification' in window&&Notification.permission==='granted'){try{new Notification(m.name||'Concord',{body:m.text||'📷 Imagem'})}catch{}}
 }
 $('form').onsubmit=async ev=>{
   ev.preventDefault();
@@ -913,6 +952,111 @@ function drawMembers(){
     }
   }
 }
+
+/* ---------- Configurações ---------- */
+let P={};try{P=JSON.parse(localStorage.getItem('cc_prefs')||'{}')}catch{}
+const saveP=()=>{try{localStorage.setItem('cc_prefs',JSON.stringify(P))}catch{}};
+const ACC=[['Verde','#74cc20'],['Azul','#3bc9db'],['Laranja','#ffa94d'],['Rosa','#f783ac'],['Lilás','#b197fc']];
+const shade=(h,f)=>'#'+[1,3,5].map(i=>Math.round(parseInt(h.substr(i,2),16)*f).toString(16).padStart(2,'0')).join('');
+function applyLook(){
+  const r=document.documentElement.style,c=P.accent||'#74cc20';
+  r.setProperty('--brand',c);r.setProperty('--brand-h',shade(c,.85));
+  document.body.dataset.theme=P.theme||'dark';document.body.style.fontSize=(P.font||16)+'px';
+}
+applyLook();
+const authMsg=e=>({'auth/invalid-credential':'Senha atual incorreta.','auth/wrong-password':'Senha atual incorreta.','auth/weak-password':'A nova senha precisa ter pelo menos 6 caracteres.','auth/email-already-in-use':'Esse e-mail já está em uso.','auth/invalid-email':'E-mail inválido.','auth/too-many-requests':'Muitas tentativas. Tente de novo mais tarde.'}[e&&e.code]||'Não foi possível concluir.');
+const reauth=pw=>reauthenticateWithCredential(me,EmailAuthProvider.credential(me.email,pw));
+function formModal(title,desc,fields,ok,fn){
+  const d=view(`<div class="pad"><h2>${title}</h2><p>${desc}</p>${fields.map(f=>`<label class="lb" for="f_${f.id}">${f.label}</label><input id="f_${f.id}" type="${f.type||'text'}" maxlength="${f.max||64}" autocomplete="off" style="margin-bottom:12px">`).join('')}<div class="err"></div></div><div class="foot2"><button class="b2 lnk" id="mBack">Cancelar</button><button class="b2 pri" id="mOk">${ok}</button></div>`);
+  fields.forEach(f=>{if(f.value)d.querySelector('#f_'+f.id).value=f.value});
+  const go=async()=>{
+    const v={};fields.forEach(f=>v[f.id]=d.querySelector('#f_'+f.id).value);
+    d.querySelector('.err').classList.remove('ok2');
+    try{
+      const msg=await fn(v);
+      if(typeof msg==='string'){d.querySelector('.err').classList.add('ok2');say(d,msg);d.querySelector('#mOk').disabled=true;d.querySelector('#mBack').textContent='Fechar';return}
+      closeModal();if(!S.classList.contains('hidden'))openSettings();
+    }catch(e){say(d,typeof e==='string'?e:authMsg(e))}
+  };
+  d.querySelector('#mBack').onclick=closeModal;d.querySelector('#mOk').onclick=go;
+  d.querySelectorAll('input').forEach(i=>enter(i,go));showModal(d);
+}
+const S=$('settings');let sTab='account';
+const btn=(t,fn,c='sec')=>{const b=el('button','b2 '+c,t);b.onclick=fn;return b};
+const sw=(on,fn)=>{const l=el('label','sw'),i=document.createElement('input');i.type='checkbox';i.checked=on;i.onchange=()=>fn(i.checked);l.append(i,el('i'));return l};
+const sRow=(label,desc,...right)=>{const r=el('div','sr'),l=el('div','lbl');l.append(el('b','',label));if(desc)l.append(el('small','',desc));r.append(l,...right);return r};
+const PAGES={
+  async account(c){
+    let u={};try{u=(await get(ref(db,'users/'+me.uid))).val()||{}}catch{}
+    c.append(el('h1','','Minha conta'));
+    c.append(sRow('Perfil','Foto e "Sobre mim".',btn('Editar perfil',()=>profileView(me.uid))));
+    c.append(sRow('Nome de exibição','O nome que as pessoas veem nas mensagens.',el('span','val',myName()),
+      btn('Editar',()=>formModal('Nome de exibição','Pode ser diferente do seu @ e pode se repetir.',[{id:'n',label:'Nome',value:myName(),max:24}],'Salvar',async v=>{
+        const n=v.n.trim();if(!n)throw 'Digite um nome.';await saveProfile(n,u.bio||'')}))));
+    c.append(sRow('Nome de usuário','Seu @ único. Amigos usam ele para te encontrar.',el('span','val','@'+(myUser||'—')),
+      btn('Editar',()=>formModal('Nome de usuário','Letras minúsculas, números, _ ou . (2 a 20 caracteres).',[{id:'h',label:'Novo @',value:myUser,max:20}],'Salvar',async v=>{
+        const h=cleanUser(v.h);if(!UN_RE.test(h))throw 'Use de 2 a 20 caracteres: letras minúsculas, números, _ ou .';
+        if(h===myUser)return;
+        const up={['usernames/'+h]:me.uid,['users/'+me.uid+'/username']:h};if(myUser)up['usernames/'+myUser]=null;
+        try{await update(ref(db),up)}catch{throw 'Esse @ já está em uso.'}
+        myUser=h;Object.keys(friendList).forEach(f=>update(ref(db,'friends/'+f+'/'+me.uid),{username:h}).catch(()=>{}));}))));
+    const em=me.email||'',mask=em.replace(/^(.).*(@.*)$/,'$1•••••$2'),ev=el('span','val',mask);let shown=false;
+    const show=el('button','link','Mostrar');show.onclick=()=>{shown=!shown;ev.textContent=shown?em:mask;show.textContent=shown?'Ocultar':'Mostrar'};
+    c.append(sRow('E-mail',null,ev,show,btn('Editar',()=>formModal('Alterar e-mail','Enviaremos um link de confirmação para o novo endereço.',[{id:'e',label:'Novo e-mail',type:'email',max:100},{id:'p',label:'Senha atual',type:'password',max:100}],'Enviar link',async v=>{
+      if(!v.e.trim())throw 'Digite o novo e-mail.';await reauth(v.p);await verifyBeforeUpdateEmail(me,v.e.trim());
+      return 'Enviamos o link para o novo e-mail. Ele só muda depois que você confirmar.'}))));
+    c.append(sRow('Senha',null,btn('Editar',()=>formModal('Alterar senha','Digite sua senha atual e a nova.',[{id:'a',label:'Senha atual',type:'password',max:100},{id:'n',label:'Nova senha',type:'password',max:100},{id:'c',label:'Confirmar nova senha',type:'password',max:100}],'Alterar',async v=>{
+      if(v.n.length<6)throw 'A nova senha precisa ter pelo menos 6 caracteres.';if(v.n!==v.c)throw 'As senhas não conferem.';
+      await reauth(v.a);await updatePassword(me,v.n);return 'Senha alterada!'}))));
+  },
+  async privacy(c){
+    let allow=true;try{allow=(await get(ref(db,'users/'+me.uid+'/allowRequests'))).val()!==false}catch{}
+    c.append(el('h1','','Privacidade e permissões'));
+    c.append(sRow('Pedidos de amizade','Permitir que qualquer pessoa com o seu @ envie pedidos.',sw(allow,v=>update(ref(db,'users/'+me.uid),{allowRequests:v}).catch(()=>{}))));
+    c.append(sRow('Mensagens diretas','Só amigos podem conversar com você. Isso não pode ser desativado.'));
+    c.append(sRow('Status','Escolha como você aparece para os outros.',btn('Mudar status',statusView)));
+    c.append(el('h1','','Seus amigos'));
+    const fs=friendsArr();
+    if(!fs.length)c.append(el('div','uempty','Você ainda não tem amigos.'));
+    for(const f of fs)c.append(sRow(f.name,friendList[f.uid].username?'@'+friendList[f.uid].username:'',btn('Remover',async()=>{
+      if(!confirm('Remover '+f.name+' dos amigos?'))return;
+      try{await update(ref(db),{['friends/'+me.uid+'/'+f.uid]:null,['friends/'+f.uid+'/'+me.uid]:null})}catch{}
+      openSettings()},'lnk')));
+  },
+  async notif(c){
+    c.append(el('h1','','Notificações'));
+    const ok='Notification' in window;
+    c.append(sRow('Notificações do navegador',ok?'Avisa de novas mensagens quando a aba está em segundo plano. Em "Não perturbe" elas ficam silenciadas.':'Seu navegador não oferece suporte a notificações.',
+      ...(ok?[sw(!!P.notif&&Notification.permission==='granted',async on=>{
+        P.notif=on&&(await Notification.requestPermission())==='granted';saveP();openSettings()})]:[])));
+  },
+  async look(c){
+    c.append(el('h1','','Aparência'));
+    const th=el('div','themes');
+    for(const [k,n] of [['dark','Escuro'],['black','Preto (AMOLED)']])th.append(btn(n,()=>{P.theme=k;saveP();applyLook();openSettings()},'th'+((P.theme||'dark')===k?' on':'')));
+    c.append(sRow('Tema'),th);
+    const sa=el('div','swatches');
+    for(const [n,h] of ACC){const b=el('button','swt'+((P.accent||'#74cc20')===h?' on':''));b.style.background=h;b.title=n;b.setAttribute('aria-label',n);b.onclick=()=>{P.accent=h;saveP();applyLook();openSettings()};sa.append(b)}
+    c.append(sRow('Cor de destaque'),sa);
+    const rg=document.createElement('input');rg.type='range';rg.min=13;rg.max=20;rg.value=P.font||16;
+    const lab=el('span','val',(P.font||16)+'px');
+    rg.oninput=()=>{P.font=+rg.value;lab.textContent=rg.value+'px';applyLook()};rg.onchange=saveP;
+    c.append(sRow('Tamanho da fonte',null,rg,lab));
+  }
+};
+const TABS=[['account','Minha conta'],['privacy','Privacidade e permissões'],['notif','Notificações'],['look','Aparência']];
+function openSettings(tab){
+  if(typeof tab==='string')sTab=tab;
+  S.classList.remove('hidden');S.innerHTML='';
+  const nav=el('nav'),sec=el('section'),c=el('div','sc'),x=el('button','sx','✕');x.setAttribute('aria-label','Fechar');x.onclick=closeSettings;
+  nav.append(el('h3','','Configurações'));
+  for(const [k,n] of TABS)nav.append(btn(n,()=>openSettings(k),'sn'+(k===sTab?' on':'')));
+  nav.append(btn('Sair',()=>{closeSettings();signOut(auth)},'sn red'));
+  sec.append(c);S.append(nav,sec,x);PAGES[sTab](c);
+}
+const closeSettings=()=>S.classList.add('hidden');
+$('setBtn').onclick=()=>openSettings('account');
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!S.classList.contains('hidden')&&ov.classList.contains('hidden'))closeSettings()});
 mode(false);
 </script>
 </body>
