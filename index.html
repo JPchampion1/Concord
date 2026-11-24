@@ -229,6 +229,9 @@ body[data-theme="black"]{--bg1:#000;--bg2:#0b0b0c;--bg3:#111113;--hov:#1b1b1e;--
 .sr{display:flex;align-items:center;gap:12px;padding:14px 0;border-bottom:1px solid var(--bg1)}
 .sr .lbl{flex:1;min-width:0}.sr .lbl b{display:block;font-weight:600}.sr .lbl small{display:block;margin-top:2px;font-size:13px;color:var(--mut)}
 .sr .val{max-width:40%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sc.flat .sr,.sc.flat h1+.sr{border:0}
+.sc.flat .sr{padding:10px 0}
+.sc.flat .themes,.sc.flat .swatches{margin-bottom:12px}
 .sx{position:fixed;top:12px;right:16px;width:36px;height:36px;border-radius:50%;border:2px solid var(--mut);background:none;color:var(--mut);font-size:16px}
 .sx:hover{color:var(--txt);border-color:var(--txt)}
 .sw{position:relative;width:40px;height:24px;flex:none}
@@ -1070,7 +1073,7 @@ const TABS=[['account','Minha conta'],['privacy','Privacidade e permissões'],['
 function openSettings(tab){
   if(typeof tab==='string')sTab=tab;
   S.classList.remove('hidden');S.innerHTML='';
-  const nav=el('nav'),sec=el('section'),c=el('div','sc'),x=ib('sx','x');x.setAttribute('aria-label','Fechar');x.onclick=closeSettings;
+  const nav=el('nav'),sec=el('section'),c=el('div','sc'+(sTab==='look'?' flat':'')),x=ib('sx','x');x.setAttribute('aria-label','Fechar');x.onclick=closeSettings;
   nav.append(el('h3','','Configurações'));
   for(const [k,n] of TABS)nav.append(btn(n,()=>openSettings(k),'sn'+(k===sTab?' on':'')));
   nav.append(btn('Sair',()=>{closeSettings();signOut(auth)},'sn red'));
