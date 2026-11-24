@@ -171,6 +171,11 @@ button{cursor:pointer;border:0}
 .pic{margin-top:4px;max-width:100%;border-radius:8px;overflow:hidden;background:var(--bg2);cursor:zoom-in}
 .pic img{display:block;width:100%;height:100%;object-fit:cover}
 .lbimg{max-width:100%;max-height:100%;border-radius:8px;cursor:zoom-out}
+.pact{display:flex;gap:8px;align-items:center}
+.pact:empty,.pfoot:empty{display:none}
+.pfoot{display:flex;justify-content:flex-end;gap:8px;margin-top:12px}
+.phint{margin-top:8px;font-size:13px;color:var(--err)}
+.phint:empty{display:none}
 @media(max-width:900px){#app{grid-template-columns:72px 200px 1fr}#members{display:none}}
 @media(max-width:560px){#app{grid-template-columns:60px 1fr}#side{display:none}.sv{width:42px;height:42px}}
 </style>
@@ -371,62 +376,63 @@ function createView(){
   d.querySelector('#mBack').onclick=chooseView;d.querySelector('#mOk').onclick=go;enter(inp,go);
   showModal(d);
 }
-// transforma um texto em campo editável ao clicar; salva ao sair do campo ou com Enter
-function editable(box,get,save,show,multi,max){
-  box.classList.add('ed');box.title='Clique para editar';
-  box.onclick=()=>{
-    if(box.querySelector('.ei'))return;
-    const f=document.createElement(multi?'textarea':'input');f.className='ei';f.maxLength=max;f.value=get();
-    box.textContent='';box.append(f);f.focus();f.select();
-    let done=false;
-    const end=async ok=>{
-      if(done)return;done=true;
-      const v=f.value.trim();
-      if(ok&&v!==get()&&(multi||v))await save(v);
-      show();
-    };
-    f.onblur=()=>end(true);
-    f.onkeydown=e=>{
-      if(e.key==='Escape'){e.preventDefault();e.stopPropagation();end(false)}
-      else if(e.key==='Enter'&&(!multi||e.ctrlKey)){e.preventDefault();end(true)}
-    };
-  };
-}
-function pickPhoto(hint){
-  const fi=document.createElement('input');fi.type='file';fi.accept='image/*';
-  fi.onchange=async()=>{
-    const f=fi.files[0];if(!f)return;
-    try{await set(ref(db,'avatars/'+me.uid),(await shrink(f,128,.82,true)).url)}
-    catch{hint.firstChild.textContent='Não foi possível enviar a imagem.'}
-  };
-  fi.click();
-}
 async function profileView(uid){
   const isMe=uid===me.uid;let u={};
   try{u=(await get(ref(db,'users/'+uid))).val()||{}}catch{}
   let name=isMe?myName():(u.name||'Usuário'),bio=u.bio||'';
   const since=isMe&&me.metadata.creationTime?Date.parse(me.metadata.creationTime):u.createdAt;
-  const d=view(`<div class="pbanner"></div><div class="pbody"><div class="pav"></div><div class="pname"></div><div class="pst"></div>
-    <div class="pcard"><h4>Sobre mim</h4><div class="pbio"></div><h4>Membro desde</h4><div class="psince"></div></div><div class="phint"><span></span></div></div>`);
+  const d=view(`<div class="pbanner"></div><div class="pbody"><div class="pav"></div><div class="pname"></div><div class="pst"></div><div class="pact"></div>
+    <div class="pcard"><h4>Sobre mim</h4><div class="pbio"></div><h4>Membro desde</h4><div class="psince"></div></div><div class="phint"></div><div class="pfoot"></div></div>`);
   const av=avatar(name,uid);av.classList.add('big');d.querySelector('.pav').append(av);
-  const nm=d.querySelector('.pname'),bo=d.querySelector('.pbio'),hint=d.querySelector('.phint'),msg=hint.firstChild;
-  const showName=()=>nm.textContent=name;
-  const showBio=()=>{bo.textContent=bio||(isMe?'Clique para adicionar uma descrição.':'Nenhuma descrição.');bo.classList.toggle('nil',!bio)};
-  showName();showBio();
+  const nm=d.querySelector('.pname'),bo=d.querySelector('.pbio'),act=d.querySelector('.pact'),hint=d.querySelector('.phint'),foot=d.querySelector('.pfoot');
   d.querySelector('.pst').textContent=pres[uid]?'Online':'Offline';
   d.querySelector('.psince').textContent=since?new Date(since).toLocaleDateString('pt-BR',{day:'numeric',month:'long',year:'numeric'}):'—';
-  if(isMe){
-    const fail='Não foi possível salvar. Tente de novo.';
-    editable(nm,()=>name,async v=>{try{await saveProfile(v,bio);name=v;msg.textContent=''}catch{msg.textContent=fail}},showName,false,24);
-    editable(bo,()=>bio,async v=>{try{await saveProfile(name,v);bio=v;msg.textContent=''}catch{msg.textContent=fail}},showBio,true,190);
-    av.classList.add('chg');av.title='Trocar foto';av.onclick=()=>pickPhoto(hint);
-    msg.textContent='Clique na foto, no nome ou na descrição para editar.';
-    if(photos[uid]){
-      const r=el('button','link','Remover foto');
-      r.onclick=()=>{remove(ref(db,'avatars/'+uid));r.remove()};hint.append(r);
-    }
-  }
-  showModal(d);
+
+  const show=()=>{ // modo visualização
+    nm.textContent=name;
+    bo.textContent=bio||(isMe?'Você ainda não escreveu nada. Clique em Editar perfil.':'Nenhuma descrição.');
+    bo.classList.toggle('nil',!bio);
+    act.innerHTML='';foot.innerHTML='';hint.textContent='';applyPhoto(av);
+    if(isMe){const b=el('button','b2 pri','Editar perfil');b.onclick=edit;act.append(b)}
+  };
+  const edit=()=>{ // modo edição
+    let photo; // undefined = sem mudança, null = remover, texto = nova foto
+    const ni=document.createElement('input'),bi=document.createElement('textarea');
+    ni.className=bi.className='ei';ni.maxLength=24;bi.maxLength=190;ni.value=name;bi.value=bio;
+    ni.setAttribute('aria-label','Nome de exibição');bi.setAttribute('aria-label','Sobre mim');
+    nm.textContent='';nm.append(ni);bo.textContent='';bo.classList.remove('nil');bo.append(bi);
+    act.innerHTML='';foot.innerHTML='';hint.textContent='';
+    const preview=url=>{av.style.backgroundImage=url?`url("${url}")`:'';av.style.color=url?'transparent':''};
+    const pick=el('button','b2 sec','Trocar foto');
+    pick.onclick=()=>{
+      const fi=document.createElement('input');fi.type='file';fi.accept='image/*';
+      fi.onchange=async()=>{
+        const f=fi.files[0];if(!f)return;
+        try{photo=(await shrink(f,128,.82,true)).url;preview(photo)}catch{hint.textContent='Não foi possível ler essa imagem.'}
+      };
+      fi.click();
+    };
+    act.append(pick);
+    if(photos[uid]){const rm=el('button','b2 lnk','Remover foto');rm.onclick=()=>{photo=null;preview(null)};act.append(rm)}
+    const cancel=el('button','b2 lnk','Cancelar'),save=el('button','b2 pri','Salvar');
+    cancel.onclick=show;
+    save.onclick=async()=>{
+      const n=ni.value.trim(),b=bi.value.trim();
+      if(!n){hint.textContent='O nome não pode ficar vazio.';return}
+      save.disabled=true;
+      try{
+        await saveProfile(n,b);
+        if(photo)await set(ref(db,'avatars/'+uid),photo);
+        else if(photo===null)await remove(ref(db,'avatars/'+uid));
+        if(photo)photos[uid]=photo;else if(photo===null)delete photos[uid];
+        name=n;bio=b;show();
+      }catch{save.disabled=false;hint.textContent='Não foi possível salvar. Tente de novo.'}
+    };
+    ni.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();save.click()}};
+    bi.onkeydown=e=>{if(e.key==='Enter'&&e.ctrlKey){e.preventDefault();save.click()}};
+    foot.append(cancel,save);ni.focus();ni.select();
+  };
+  show();showModal(d);
 }
 async function saveProfile(name,bio){
   const changed=name!==myName();
