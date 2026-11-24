@@ -180,6 +180,19 @@ button{cursor:pointer;border:0}
 .pfoot{display:flex;justify-content:flex-end;gap:8px;margin-top:12px}
 .phint{margin-top:8px;font-size:13px;color:var(--err)}
 .phint:empty{display:none}
+/* ---------- AMIGOS ---------- */
+.puser{font-size:14px;color:var(--mut)}.puser:empty{display:none}
+.ch.dm .t{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ch.dm small,.rq small{display:block;font-size:12px;color:var(--mut);font-weight:400}
+.rq{display:flex;align-items:center;gap:12px;padding:6px 8px}
+.rq .av{width:32px;height:32px;font-size:13px}
+.rq .t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500}
+.rqb{width:32px;height:32px;border-radius:50%;background:var(--bg1);color:var(--mut);font-size:16px}
+.rqb:hover{color:var(--txt)}.rqb.ok:hover{background:var(--brand);color:#0b1a02}
+.at{display:flex;align-items:center;gap:8px;height:40px;padding:0 10px;border-radius:3px;background:var(--inp)}
+.at b{color:var(--mut)}.md .at input{height:100%;padding:0;background:none}
+.ok2{color:#7fd33a}
+body[data-req]:not([data-req="0"]) #homeBtn::after{content:"";position:absolute;right:-2px;top:-2px;width:12px;height:12px;border-radius:50%;background:var(--err);border:3px solid var(--bg1);box-sizing:content-box}
 /* ---------- CELULAR / TABLET ---------- */
 #top{display:contents}
 #navBtn,#memBtn{display:none;width:40px;height:40px;flex:none;border-radius:8px;background:none;color:var(--mut);font-size:22px;line-height:1}
@@ -225,8 +238,10 @@ button{cursor:pointer;border:0}
     <h1 id="aTitle">Bem-vindo de volta!</h1>
     <p class="sub" id="aSub">Estamos muito animados em ver você de novo!</p>
     <div id="nameWrap" class="hidden">
-      <label for="aName">Nome de usuário</label>
-      <input id="aName" maxlength="24" autocomplete="username">
+      <label for="aName">Nome de exibição</label>
+      <input id="aName" maxlength="24" autocomplete="nickname">
+      <label for="aUser">Nome de usuário (@)</label>
+      <input id="aUser" maxlength="20" autocomplete="username" autocapitalize="none" placeholder="ex.: joao_silva">
     </div>
     <label for="aEmail">E-mail</label>
     <input id="aEmail" type="email" required autocomplete="email">
@@ -326,13 +341,17 @@ $('authForm').onsubmit=async ev=>{
   const em=$('aEmail').value.trim(),pw=$('aPass').value;
   try{
     if(reg){
-      const name=$('aName').value.trim()||em.split('@')[0];
+      const name=$('aName').value.trim()||em.split('@')[0],handle=cleanUser($('aUser').value);
+      if(!UN_RE.test(handle))return $('aErr').textContent='O @ deve ter de 2 a 20 caracteres: letras minúsculas, números, _ ou .';
+      regBusy=true;
       const c=await createUserWithEmailAndPassword(auth,em,pw);
       await updateProfile(c.user,{displayName:name});
       await update(ref(db,'users/'+c.user.uid),{name});
       $('meName').textContent=name;$('meAv').replaceWith(Object.assign(avatar(name,c.user.uid),{id:'meAv'}));
+      try{await claimUsername(handle)}catch{}
+      regBusy=false;ensureUsername(); // se o @ já existir, pede outro
     }else await signInWithEmailAndPassword(auth,em,pw);
-  }catch(x){fail(x)}
+  }catch(x){regBusy=false;fail(x)}
 };
 $('logout').onclick=()=>signOut(auth);
 $('me').onclick=e=>{if(!e.target.closest('#logout'))profileView(me.uid)};
@@ -342,16 +361,42 @@ let inviteParam=new URLSearchParams(location.search).get('convite');
 let me=null,cur={sid:null,cid:null},un={srv:null,ch:null,mem:null,msg:null},pres={},members={},last=null;
 const stop=k=>{if(un[k]){un[k]();un[k]=null}};
 
+const UN_RE=/^[a-z0-9_.]{2,20}$/,cleanUser=v=>v.trim().replace(/^@/,'').toLowerCase();
+let regBusy=false,myUser='',friendList={},reqList={},dmList={};
+async function claimUsername(h){
+  const u=auth.currentUser;
+  try{await set(ref(db,'usernames/'+h),u.uid)}catch{throw 'Esse @ já está em uso.'}
+  await update(ref(db,'users/'+u.uid),{username:h});myUser=h;
+}
+async function ensureUsername(){
+  let v;try{v=(await get(ref(db,'users/'+auth.currentUser.uid+'/username'))).val()}catch{return}
+  if(v){myUser=v;return}
+  const d=view(`<div class="pad"><h2>Escolha seu @</h2><p>Seu @ é único: é com ele que seus amigos te encontram. Use letras minúsculas, números, _ ou .</p>
+    <label class="lb" for="mIn">Nome de usuário</label><div class="at"><b>@</b><input id="mIn" maxlength="20" autocomplete="off" autocapitalize="none"></div><div class="err"></div></div>
+    <div class="foot2"><span></span><button class="b2 pri" id="mOk">Salvar</button></div>`);
+  const inp=d.querySelector('#mIn');
+  inp.value=(auth.currentUser.displayName||'').toLowerCase().replace(/[^a-z0-9_.]/g,'').slice(0,20);
+  const go=async()=>{
+    const h=cleanUser(inp.value);
+    if(!UN_RE.test(h))return say(d,'Use de 2 a 20 caracteres: letras minúsculas, números, _ ou .');
+    try{await claimUsername(h);closeModal()}catch(e){say(d,typeof e==='string'?e:'Não foi possível salvar.')}
+  };
+  d.querySelector('#mOk').onclick=go;enter(inp,go);
+  showModal(d);lockModal=true;d.parentNode.querySelector('.x')?.remove();
+}
 onAuthStateChanged(auth,u=>{
   me=u;
   $('auth').classList.toggle('hidden',!!u);
   $('app').classList.toggle('hidden',!u);
-  if(!u){['srv','ch','mem','msg','dm'].forEach(stop);cur={sid:null,cid:null};return}
+  if(!u){['srv','ch','mem','msg','dm','fr','rq'].forEach(stop);friendList={};reqList={};myUser='';cur={sid:null,cid:null};return}
   const name=u.displayName||u.email.split('@')[0];
   $('meName').textContent=name;
   $('meAv').replaceWith(Object.assign(avatar(name,u.uid),{id:'meAv'}));
   $('meAv').insertAdjacentHTML('beforeend','<span class="dot"></span>');
   update(ref(db,'users/'+u.uid),{name,createdAt:Date.parse(u.metadata.creationTime)||Date.now()}).catch(()=>{});
+  if(!regBusy)ensureUsername();
+  stop('fr');un.fr=onValue(ref(db,'friends/'+u.uid),s=>{friendList=s.val()||{};if(cur.home)drawDms()});
+  stop('rq');un.rq=onValue(ref(db,'friendRequests/'+u.uid),s=>{reqList=s.val()||{};document.body.dataset.req=Object.keys(reqList).length;if(cur.home)drawDms()});
   // presença
   const pr=ref(db,'presence/'+u.uid);
   onValue(ref(db,'.info/connected'),s=>{if(s.val()){onDisconnect(pr).set(false);set(pr,true)}});
@@ -388,7 +433,8 @@ function showModal(node){
   m.append(x,node);ov.append(m);ov.classList.remove('hidden');
   const i=m.querySelector('input');if(i){i.focus();i.select()}
 }
-function closeModal(){ov.classList.add('hidden');ov.innerHTML=''}
+let lockModal=false;
+function closeModal(){lockModal=false;ov.classList.add('hidden');ov.innerHTML=''}
 // ---------- CELULAR: menus laterais (servidores/canais e membros) ----------
 const appEl=$('app'),isMob=()=>matchMedia('(max-width:700px)').matches,isTab=()=>matchMedia('(max-width:900px)').matches;
 const setNav=o=>{appEl.classList.toggle('nav-open',o);if(o)appEl.classList.remove('mem-open')};
@@ -408,7 +454,7 @@ document.addEventListener('touchend',e=>{
   if(dx>0){if(m)setMem(false);else if(isMob()&&!n)setNav(true)}
   else{if(n)setNav(false);else if(!m&&isTab())setMem(true)}
 },{passive:true});
-ov.onmousedown=e=>{if(e.target===ov)closeModal()};
+ov.onmousedown=e=>{if(e.target===ov&&!lockModal)closeModal()};
 addEventListener('keydown',e=>{if(e.key==='Escape')closeModal()});
 const view=h=>{const d=el('div');d.innerHTML=h;return d};
 const say=(d,t)=>d.querySelector('.err').textContent=t;
@@ -437,7 +483,7 @@ async function profileView(uid){
   try{u=(await get(ref(db,'users/'+uid))).val()||{}}catch{}
   let name=isMe?myName():(u.name||'Usuário'),bio=u.bio||'';
   const since=isMe&&me.metadata.creationTime?Date.parse(me.metadata.creationTime):u.createdAt;
-  const d=view(`<div class="pbanner"></div><div class="pbody"><div class="pav"></div><div class="pname"></div><div class="pst"></div><div class="pact"></div>
+  const d=view(`<div class="pbanner"></div><div class="pbody"><div class="pav"></div><div class="pname"></div><div class="puser"></div><div class="pst"></div><div class="pact"></div>
     <div class="pcard"><h4>Sobre mim</h4><div class="pbio"></div><h4>Membro desde</h4><div class="psince"></div></div><div class="phint"></div><div class="pfoot"></div></div>`);
   const av=avatar(name,uid);av.classList.add('big');d.querySelector('.pav').append(av);
   const nm=d.querySelector('.pname'),bo=d.querySelector('.pbio'),act=d.querySelector('.pact'),hint=d.querySelector('.phint'),foot=d.querySelector('.pfoot');
@@ -449,7 +495,11 @@ async function profileView(uid){
     bo.textContent=bio||(isMe?'Você ainda não escreveu nada. Clique em Editar perfil.':'Nenhuma descrição.');
     bo.classList.toggle('nil',!bio);
     act.innerHTML='';foot.innerHTML='';hint.textContent='';applyPhoto(av);
+    d.querySelector('.puser').textContent=(isMe?myUser:u.username)?'@'+(isMe?myUser:u.username):'';
     if(isMe){const b=el('button','b2 pri','Editar perfil');b.onclick=edit;act.append(b)}
+    else if(friendList[uid]){const b=el('button','b2 pri','Enviar mensagem');b.onclick=()=>openDm({uid,name}).catch(()=>{});act.append(b)}
+    else{const b=el('button','b2 pri','Adicionar amigo');b.onclick=async()=>{
+      try{const r=await requestTo(uid);b.textContent=r==='accepted'?'Amigos':'Pedido enviado';b.disabled=true}catch(e){hint.textContent=typeof e==='string'?e:'Não foi possível enviar o pedido.'}};act.append(b)}
   };
   const edit=()=>{ // modo edição
     let photo; // undefined = sem mudança, null = remover, texto = nova foto
@@ -504,35 +554,45 @@ async function saveProfile(name,bio){
     Object.keys(sv.val()||{}).forEach(id=>up['servers/'+id+'/members/'+me.uid+'/name']=name);
     Object.entries(dm.val()||{}).forEach(([id,x])=>{
       up['dms/'+id+'/members/'+me.uid+'/name']=name;
-      if(!x.group&&x.peer)up['userDms/'+x.peer+'/'+id+'/name']=name;
+      if(!x.group&&x.peer)set(ref(db,'userDms/'+x.peer+'/'+id+'/name'),name).catch(()=>{});
     });
+    Object.keys(friendList).forEach(f=>update(ref(db,'friends/'+f+'/'+me.uid),{name}).catch(()=>{}));
     await update(ref(db),up);
   }catch{}
 }
-function newChatView(){
-  const d=view(`<div class="pad"><h2>Nova conversa</h2><p>Converse com uma pessoa ou crie um grupo.</p>
-    <button class="opt" id="oDm"><span class="ic">@</span>Mensagem direta<span class="arr">›</span></button>
-    <button class="opt" id="oGp" style="margin-top:8px"><span class="ic">+</span>Criar grupo<span class="arr">›</span></button></div>`);
-  d.querySelector('#oDm').onclick=dmView;d.querySelector('#oGp').onclick=groupView;
-  showModal(d);
+const friendsArr=()=>Object.entries(friendList).map(([uid,v])=>({uid,name:v.name||'?'})).sort((a,b)=>a.name.localeCompare(b.name));
+const loadUsers=async()=>friendsArr(); // grupos só com amigos
+async function requestTo(uid){
+  if(uid===me.uid)throw 'Você não pode adicionar a si mesmo.';
+  if(friendList[uid])throw 'Vocês já são amigos.';
+  if(reqList[uid]){await acceptRequest(uid);return 'accepted'}
+  await set(ref(db,'friendRequests/'+uid+'/'+me.uid),{name:myName(),username:myUser,ts:Date.now()});
+  return 'sent';
 }
-async function loadUsers(){
-  const u=(await get(ref(db,'users'))).val()||{};delete u[me.uid];
-  return Object.entries(u).map(([uid,v])=>({uid,name:v.name||'?'})).sort((a,b)=>a.name.localeCompare(b.name));
+async function acceptRequest(uid){
+  const r=reqList[uid]||{};
+  await update(ref(db),{
+    ['friends/'+me.uid+'/'+uid]:{name:r.name||'?',username:r.username||''},
+    ['friends/'+uid+'/'+me.uid]:{name:myName(),username:myUser},
+    ['friendRequests/'+me.uid+'/'+uid]:null
+  });
 }
-function dmView(){
-  const d=view(`<div class="pad"><h2>Mensagem direta</h2><p>Escolha uma pessoa para conversar.</p>
-    <input id="mIn" placeholder="Buscar por nome" autocomplete="off"><div class="ulist"></div><div class="err"></div></div>
-    <div class="foot2"><button class="b2 lnk" id="mBack">Voltar</button></div>`);
-  const list=d.querySelector('.ulist'),inp=d.querySelector('#mIn');let all=[];
-  const draw=()=>{
-    const q=inp.value.toLowerCase(),f=all.filter(u=>u.name.toLowerCase().includes(q));list.innerHTML='';
-    if(!f.length)list.append(el('div','uempty',all.length?'Ninguém encontrado.':'Ainda não há outras pessoas cadastradas.'));
-    for(const u of f){const r=el('button','urow');r.append(avatar(u.name,u.uid),el('span','',u.name));
-      r.onclick=()=>openDm(u).catch(()=>say(d,'Não foi possível abrir a conversa.'));list.append(r)}
+function addFriendView(){
+  const d=view(`<div class="pad"><h2>Adicionar amigo</h2><p>Digite o @ da pessoa para enviar um pedido de amizade.</p>
+    <label class="lb" for="mIn">Nome de usuário</label><div class="at"><b>@</b><input id="mIn" maxlength="20" placeholder="usuario" autocomplete="off" autocapitalize="none"></div><div class="err"></div></div>
+    <div class="foot2"><button class="b2 lnk" id="mBack">Cancelar</button><button class="b2 pri" id="mOk">Enviar pedido</button></div>`);
+  const inp=d.querySelector('#mIn');
+  const go=async()=>{
+    const h=cleanUser(inp.value),err=d.querySelector('.err');err.classList.remove('ok2');
+    if(!UN_RE.test(h))return say(d,'Digite um @ válido.');
+    try{
+      const uid=(await get(ref(db,'usernames/'+h))).val();
+      if(!uid)return say(d,'Ninguém encontrado com esse @.');
+      const r=await requestTo(uid);
+      err.classList.add('ok2');say(d,r==='accepted'?'Vocês agora são amigos!':'Pedido enviado para @'+h+'.');inp.value='';
+    }catch(e){say(d,typeof e==='string'?e:'Não foi possível enviar o pedido.')}
   };
-  inp.oninput=draw;d.querySelector('#mBack').onclick=newChatView;
-  loadUsers().then(u=>{all=u;draw()}).catch(()=>say(d,'Não foi possível carregar as pessoas.'));
+  d.querySelector('#mBack').onclick=closeModal;d.querySelector('#mOk').onclick=go;enter(inp,go);
   showModal(d);
 }
 function groupView(){
@@ -543,14 +603,14 @@ function groupView(){
   const list=d.querySelector('.ulist'),sel=new Set();let all=[];
   d.querySelector('#gName').value='Grupo de '+myName();
   loadUsers().then(u=>{
-    all=u;if(!u.length)list.append(el('div','uempty','Ainda não há outras pessoas cadastradas.'));
+    all=u;if(!u.length)list.append(el('div','uempty','Adicione amigos para criar um grupo.'));
     for(const x of u){
       const r=el('label','urow'),c=document.createElement('input');c.type='checkbox';
       c.onchange=()=>c.checked?sel.add(x.uid):sel.delete(x.uid);
       r.append(c,avatar(x.name,x.uid),el('span','',x.name));list.append(r);
     }
   }).catch(()=>say(d,'Não foi possível carregar as pessoas.'));
-  d.querySelector('#mBack').onclick=newChatView;
+  d.querySelector('#mBack').onclick=closeModal;
   d.querySelector('#mOk').onclick=async()=>{
     const name=d.querySelector('#gName').value.trim();
     if(!name)return say(d,'Dê um nome ao grupo.');
@@ -611,15 +671,33 @@ function goHome(){
   un.dm=onValue(ref(db,'userDms/'+me.uid),s=>drawDms(s.val()||{}));
 }
 function drawDms(list){
+  if(list)dmList=list;
   const box=$('chans');box.innerHTML='';
-  const f=el('button','find','Encontre ou comece uma conversa');f.onclick=newChatView;box.append(f);
-  const h=el('div','chead');h.append(el('span','','Mensagens diretas'));
-  const add=el('button','','+');add.title='Nova conversa ou grupo';add.onclick=newChatView;h.append(add);box.append(h);
-  const ids=Object.keys(list).sort((a,b)=>(list[b].ts||0)-(list[a].ts||0));
-  if(!ids.length)box.append(el('div','empty','Nenhuma conversa ainda. Use o + para começar.'));
+  const f=el('button','find','Adicionar amigo');f.onclick=addFriendView;box.append(f);
+  const head=(t,btn)=>{const h=el('div','chead');h.append(el('span','',t));if(btn)h.append(btn);box.append(h)};
+  const who=(name,user)=>{const t=el('span','t',name);if(user)t.append(el('small','','@'+user));return t};
+  const rs=Object.entries(reqList);
+  if(rs.length){head('Pedidos de amizade — '+rs.length);
+    for(const [uid,r] of rs){
+      const row=el('div','rq'),ok=el('button','rqb ok','✓'),no=el('button','rqb','✕');
+      ok.title='Aceitar';no.title='Recusar';
+      ok.onclick=()=>acceptRequest(uid).catch(()=>{});no.onclick=()=>remove(ref(db,'friendRequests/'+me.uid+'/'+uid)).catch(()=>{});
+      row.append(avatar(r.name,uid),who(r.name,r.username),ok,no);box.append(row);
+    }}
+  const fs=friendsArr();
+  head('Amigos — '+fs.length);
+  if(!fs.length)box.append(el('div','empty','Nenhum amigo ainda. Use "Adicionar amigo".'));
+  for(const u of fs){
+    const b=el('button','ch dm');b.append(avatar(u.name,u.uid),who(u.name,friendList[u.uid].username));
+    b.onclick=()=>openDm(u).catch(()=>{});box.append(b);
+  }
+  const add=el('button','','+');add.title='Criar grupo';add.onclick=groupView;
+  head('Mensagens diretas',add);
+  const ids=Object.keys(dmList).sort((a,b)=>(dmList[b].ts||0)-(dmList[a].ts||0));
+  if(!ids.length)box.append(el('div','empty','Nenhuma conversa ainda. Clique em um amigo.'));
   for(const id of ids){
-    const d=list[id],b=el('button','ch dm'+(id===cur.dm?' on':''));b.dataset.id=id;
-    b.append(avatar(d.name,d.group?id:d.peer),el('span','',d.name));b.onclick=()=>pickDm(id,d);box.append(b);
+    const d=dmList[id],b=el('button','ch dm'+(id===cur.dm?' on':''));b.dataset.id=id;
+    b.append(avatar(d.name,d.group?id:d.peer),who(d.name));b.onclick=()=>pickDm(id,d);box.append(b);
   }
 }
 function pickDm(id,d){
