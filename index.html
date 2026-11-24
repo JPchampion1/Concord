@@ -2,7 +2,8 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#1e1f22">
 <title>Concord</title>
 <link rel="icon" type="image/png" href="logo.png">
 <style>
@@ -179,8 +180,40 @@ button{cursor:pointer;border:0}
 .pfoot{display:flex;justify-content:flex-end;gap:8px;margin-top:12px}
 .phint{margin-top:8px;font-size:13px;color:var(--err)}
 .phint:empty{display:none}
-@media(max-width:900px){#app{grid-template-columns:72px 200px 1fr}#members{display:none}}
-@media(max-width:560px){#app{grid-template-columns:60px 1fr}#side{display:none}.sv{width:42px;height:42px}}
+/* ---------- CELULAR / TABLET ---------- */
+#top{display:contents}
+#navBtn,#memBtn{display:none;width:40px;height:40px;flex:none;border-radius:8px;background:none;color:var(--mut);font-size:22px;line-height:1}
+#navBtn:active,#memBtn:active{background:var(--hov);color:var(--txt)}
+#scrim{display:none;position:fixed;inset:0;z-index:7;background:rgba(0,0,0,.55)}
+@media(max-width:900px){
+  #app{grid-template-columns:72px 200px 1fr}
+  #memBtn{display:block}
+  #members{position:fixed;top:0;right:0;bottom:0;width:min(82vw,300px);z-index:8;transform:translateX(100%);transition:transform .22s ease;box-shadow:-8px 0 24px rgba(0,0,0,.4);padding-top:max(16px,env(safe-area-inset-top))}
+  #app.mem-open #members{transform:none}
+  #app.mem-open~#scrim{display:block}
+}
+@media(max-width:700px){
+  #app{height:100dvh;grid-template-columns:1fr}
+  #navBtn{display:block}
+  #top{display:flex;align-items:center;gap:4px;height:calc(48px + env(safe-area-inset-top,0px));padding:env(safe-area-inset-top,0px) 8px 0;border-bottom:1px solid var(--bg1);box-shadow:0 1px 0 rgba(0,0,0,.1)}
+  #chtitle{flex:1;min-width:0;height:48px;padding:0 4px;border:0;box-shadow:none;overflow:hidden;white-space:nowrap}
+  #servers{position:fixed;top:0;bottom:0;left:0;width:64px;z-index:8;transform:translateX(-100%);transition:transform .22s ease;padding-top:max(12px,env(safe-area-inset-top))}
+  #side{position:fixed;top:0;bottom:0;left:64px;width:min(calc(88vw - 64px),266px);z-index:8;transform:translateX(calc(-100% - 64px));transition:transform .22s ease;padding-top:env(safe-area-inset-top,0px)}
+  #app.nav-open #servers,#app.nav-open #side{transform:none}
+  #app.nav-open~#scrim{display:block}
+  #me{height:calc(52px + env(safe-area-inset-bottom,0px));padding-bottom:env(safe-area-inset-bottom,0px)}
+  .ch{padding:10px 8px}
+  .m{gap:12px;padding:2px 12px}
+  .m.first{margin-top:12px}
+  #form{padding:0 8px calc(12px + env(safe-area-inset-bottom,0px))}
+  #form input,.card input,.md input,.md textarea{font-size:16px}
+  #auth{padding:12px}
+  .card{padding:24px 16px}
+  #ov{align-items:flex-end;padding:0}
+  .md{max-width:none;max-height:92dvh;border-radius:16px 16px 0 0;padding-bottom:env(safe-area-inset-bottom,0px)}
+  .md .x{width:40px;height:40px}
+  .inv{max-width:100%}
+}
 </style>
 </head>
 <body>
@@ -219,13 +252,14 @@ button{cursor:pointer;border:0}
     </div>
   </aside>
   <main id="main">
-    <div id="chtitle"></div>
+    <div id="top"><button id="navBtn" aria-label="Abrir menu">☰</button><div id="chtitle"></div><button id="memBtn" aria-label="Membros">👥</button></div>
     <div id="msgs"></div>
     <form id="form"><button type="button" id="attach" title="Enviar imagem">+</button><input id="msgIn" autocomplete="off" disabled placeholder="Selecione um canal"></form>
   </main>
   <aside id="members"></aside>
 </div>
 
+<div id="scrim"></div>
 <div id="ov" class="hidden"></div>
 
 <script type="module">
@@ -355,6 +389,25 @@ function showModal(node){
   const i=m.querySelector('input');if(i){i.focus();i.select()}
 }
 function closeModal(){ov.classList.add('hidden');ov.innerHTML=''}
+// ---------- CELULAR: menus laterais (servidores/canais e membros) ----------
+const appEl=$('app'),isMob=()=>matchMedia('(max-width:700px)').matches,isTab=()=>matchMedia('(max-width:900px)').matches;
+const setNav=o=>{appEl.classList.toggle('nav-open',o);if(o)appEl.classList.remove('mem-open')};
+const setMem=o=>{appEl.classList.toggle('mem-open',o);if(o)appEl.classList.remove('nav-open')};
+$('navBtn').onclick=()=>setNav(!appEl.classList.contains('nav-open'));
+$('memBtn').onclick=()=>setMem(!appEl.classList.contains('mem-open'));
+$('scrim').onclick=()=>{setNav(false);setMem(false)};
+$('chans').addEventListener('click',e=>{if(isMob()&&e.target.closest('.ch'))setNav(false)});
+if(isMob())setNav(true); // abre no menu de canais, como o Discord
+let tx=0,ty=0;
+document.addEventListener('touchstart',e=>{tx=e.touches[0].clientX;ty=e.touches[0].clientY},{passive:true});
+document.addEventListener('touchend',e=>{
+  if(!ov.classList.contains('hidden')||appEl.classList.contains('hidden'))return;
+  const dx=e.changedTouches[0].clientX-tx,dy=e.changedTouches[0].clientY-ty;
+  if(Math.abs(dx)<70||Math.abs(dx)<Math.abs(dy)*1.5)return;
+  const n=appEl.classList.contains('nav-open'),m=appEl.classList.contains('mem-open');
+  if(dx>0){if(m)setMem(false);else if(isMob()&&!n)setNav(true)}
+  else{if(n)setNav(false);else if(!m&&isTab())setMem(true)}
+},{passive:true});
 ov.onmousedown=e=>{if(e.target===ov)closeModal()};
 addEventListener('keydown',e=>{if(e.key==='Escape')closeModal()});
 const view=h=>{const d=el('div');d.innerHTML=h;return d};
