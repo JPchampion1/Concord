@@ -147,6 +147,9 @@ button{cursor:pointer;border:0}
 .av.big{width:92px;height:92px;border:6px solid var(--bg2);margin-top:-46px;font-size:38px;cursor:default}
 .pname{margin-top:8px;font-size:20px;font-weight:700;overflow-wrap:anywhere}
 .pst{font-size:14px;color:var(--mut)}
+.av.big .dot{width:18px;height:18px;right:-6px;bottom:-6px;border-width:5px;border-color:var(--bg2)}
+.dot.off{background:#80848e}
+.pst:empty{display:none}
 .pact{margin:16px 0}
 .pcard{padding:12px;border-radius:8px;background:var(--bg1)}
 .pcard h4{margin:0 0 4px;font-size:12px;font-weight:700;color:#b5bac1}
@@ -385,7 +388,7 @@ async function profileView(uid){
     <div class="pcard"><h4>Sobre mim</h4><div class="pbio"></div><h4>Membro desde</h4><div class="psince"></div></div><div class="phint"></div><div class="pfoot"></div></div>`);
   const av=avatar(name,uid);av.classList.add('big');d.querySelector('.pav').append(av);
   const nm=d.querySelector('.pname'),bo=d.querySelector('.pbio'),act=d.querySelector('.pact'),hint=d.querySelector('.phint'),foot=d.querySelector('.pfoot');
-  d.querySelector('.pst').textContent=pres[uid]?'Online':'Offline';
+  const dot=el('span','dot'+(pres[uid]?'':' off'));av.append(dot); // bolinha de status no avatar
   d.querySelector('.psince').textContent=since?new Date(since).toLocaleDateString('pt-BR',{day:'numeric',month:'long',year:'numeric'}):'—';
 
   const show=()=>{ // modo visualização
