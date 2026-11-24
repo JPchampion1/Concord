@@ -86,6 +86,54 @@ button{cursor:pointer;border:0}
 .mb .av{width:32px;height:32px;font-size:13px}
 .dot{position:absolute;right:-2px;bottom:-2px;width:12px;height:12px;border-radius:50%;background:#23a55a;border:3px solid var(--bg2);box-sizing:content-box;width:10px;height:10px}
 .mb.off .dot{background:#80848e}
+/* ---------- MODAIS ---------- */
+#ov{position:fixed;inset:0;z-index:10;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(0,0,0,.7)}
+.md{position:relative;width:100%;max-width:440px;max-height:100%;overflow-y:auto;background:var(--bg2);border-radius:8px;box-shadow:0 8px 32px rgba(0,0,0,.5)}
+.md .x{position:absolute;top:12px;right:12px;width:32px;height:32px;border-radius:4px;background:none;color:var(--mut);font-size:26px;line-height:1}
+.md .x:hover{color:var(--txt)}
+.md .pad{padding:24px 16px 16px}
+.md h2{margin:8px 24px;text-align:center;font-size:24px;line-height:30px;font-weight:600}
+.md p{margin:8px 8px 20px;text-align:center;color:#b5bac1;line-height:20px}
+.md .lb{display:block;margin:4px 0 8px;font-size:12px;font-weight:700;color:#b5bac1;text-transform:uppercase}
+.md input{width:100%;height:40px;padding:10px;border:0;border-radius:3px;background:var(--inp)}
+.opt{display:flex;align-items:center;gap:16px;width:100%;height:60px;padding:0 16px;border:1px solid #3f4147;border-radius:8px;background:var(--bg3);font-weight:500;text-align:left}
+.opt:hover{background:var(--hov)}
+.opt .ic{width:32px;height:32px;border-radius:8px;display:grid;place-items:center;background:var(--brand);color:#0b1a02;font-weight:700;font-size:20px}
+.opt .arr{margin-left:auto;color:var(--mut);font-size:22px}
+.foot1{padding:0 16px 16px;text-align:center}
+.foot1 h3{margin:8px 0 16px;font-size:20px;font-weight:600}
+.foot2{display:flex;justify-content:space-between;gap:8px;padding:16px;background:#232428}
+.b2{height:38px;padding:0 16px;border-radius:3px;font-weight:500;transition:background-color .17s}
+.b2.wide{width:100%}
+.b2.sec{background:#4e5058}.b2.sec:hover{background:#6d6f78}
+.b2.pri{background:var(--brand);color:#0b1a02}.b2.pri:hover{background:var(--brand-h)}
+.b2.lnk{background:none}.b2.lnk:hover{text-decoration:underline}
+.copy{display:flex;gap:8px}.copy input{flex:1}
+/* ---------- CONVITE POR LINK ---------- */
+.tx a{color:#7fd33a;text-decoration:none}
+.tx a:hover{text-decoration:underline}
+.inv{margin-top:8px;max-width:432px;padding:16px;border:1px solid #232428;border-radius:8px;background:var(--bg2)}
+.md .inv{margin:0 0 4px;background:var(--bg3);max-width:none}
+.inv .invh{margin-bottom:12px;font-size:12px;font-weight:700;color:var(--mut)}
+.inv .invr{display:flex;align-items:center;gap:16px}
+.invic{width:50px;height:50px;border-radius:16px;flex:none;display:grid;place-items:center;background:var(--brand);color:#0b1a02;font-weight:700}
+.invi{flex:1;min-width:0}
+.invi b{display:block;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.invi small{color:var(--mut)}
+.inv .b2:disabled{opacity:.5;cursor:default}
+/* ---------- MENSAGENS DIRETAS ---------- */
+.sv.home:not(.on):not(:hover){color:var(--brand)}
+.find{width:100%;height:28px;margin-bottom:12px;padding:0 8px;border-radius:4px;background:var(--bg1);color:var(--mut);font-size:13px;text-align:left}
+.ch.dm{display:flex;align-items:center;gap:12px;padding:6px 8px}
+.ch.dm .av{width:32px;height:32px;font-size:13px}
+.ch.dm span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#chans .empty{padding:16px 8px;font-size:14px}
+.ulist{max-height:260px;overflow-y:auto;margin-top:8px}
+.urow{display:flex;align-items:center;gap:12px;width:100%;padding:8px;border-radius:4px;background:none;text-align:left;font-weight:500;cursor:pointer}
+.urow:hover{background:var(--hov)}
+.urow .av{width:32px;height:32px;font-size:13px}
+.md .urow input{width:18px;height:18px;padding:0;accent-color:var(--brand)}
+.uempty{padding:16px;text-align:center;color:var(--mut)}
 @media(max-width:900px){#app{grid-template-columns:72px 200px 1fr}#members{display:none}}
 @media(max-width:560px){#app{grid-template-columns:60px 1fr}#side{display:none}.sv{width:42px;height:42px}}
 </style>
@@ -131,6 +179,8 @@ button{cursor:pointer;border:0}
   </main>
   <aside id="members"></aside>
 </div>
+
+<div id="ov" class="hidden"></div>
 
 <script type="module">
 import {initializeApp} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
@@ -188,6 +238,7 @@ $('authForm').onsubmit=async ev=>{
 $('logout').onclick=()=>signOut(auth);
 
 /* ---------- Estado ---------- */
+let inviteParam=new URLSearchParams(location.search).get('convite');
 let me=null,cur={sid:null,cid:null},un={srv:null,ch:null,mem:null,msg:null},pres={},members={},last=null;
 const stop=k=>{if(un[k]){un[k]();un[k]=null}};
 
@@ -195,11 +246,12 @@ onAuthStateChanged(auth,u=>{
   me=u;
   $('auth').classList.toggle('hidden',!!u);
   $('app').classList.toggle('hidden',!u);
-  if(!u){['srv','ch','mem','msg'].forEach(stop);cur={sid:null,cid:null};return}
+  if(!u){['srv','ch','mem','msg','dm'].forEach(stop);cur={sid:null,cid:null};return}
   const name=u.displayName||u.email.split('@')[0];
   $('meName').textContent=name;
   $('meAv').replaceWith(Object.assign(avatar(name,u.uid),{id:'meAv'}));
   $('meAv').insertAdjacentHTML('beforeend','<span class="dot"></span>');
+  update(ref(db,'users/'+u.uid),{name}).catch(()=>{});
   // presença
   const pr=ref(db,'presence/'+u.uid);
   onValue(ref(db,'.info/connected'),s=>{if(s.val()){onDisconnect(pr).set(false);set(pr,true)}});
@@ -208,54 +260,208 @@ onAuthStateChanged(auth,u=>{
   stop('srv');
   un.srv=onValue(ref(db,'userServers/'+u.uid),s=>{
     const list=s.val()||{};drawServers(list);
-    if(!list[cur.sid]){const first=Object.keys(list)[0];first?pickServer(first,list[first].name):clearServer()}
+    if(!list[cur.sid]&&!cur.home){const first=Object.keys(list)[0];first?pickServer(first,list[first].name):goHome()}
   });
+  if(inviteParam){const k=inviteParam;inviteParam=null;history.replaceState(null,'',location.pathname);inviteModal(k)}
 });
 
 /* ---------- Servidores ---------- */
 function drawServers(list){
   const nav=$('servers');nav.innerHTML='';
+  const hb=el('button','sv home'+(cur.home?' on':''),'C');hb.id='homeBtn';hb.title='Mensagens diretas';
+  hb.onclick=()=>{if(!cur.home)goHome()};nav.append(hb,el('div','sep'));
   for(const [sid,s] of Object.entries(list)){
     const b=el('button','sv'+(sid===cur.sid?' on':''),s.name.slice(0,2).toUpperCase());
     b.title=s.name;b.onclick=()=>pickServer(sid,s.name);nav.append(b);
   }
   nav.append(el('div','sep'));
-  const add=el('button','sv add','+');add.title='Criar servidor';add.onclick=newServer;
-  const join=el('button','sv add','→');join.title='Entrar com código';join.onclick=joinServer;
-  nav.append(add,join);
+  const add=el('button','sv add','+');add.title='Adicionar um servidor';add.onclick=chooseView;
+  nav.append(add);
 }
-async function newServer(){
-  const name=(prompt('Nome do novo servidor:')||'').trim();if(!name)return;
-  const sid=push(ref(db,'servers')).key,cid=push(ref(db,'channels/'+sid)).key,n=me.displayName||me.email.split('@')[0];
+/* ---------- Janelas (modais) ---------- */
+const myName=()=>me.displayName||me.email.split('@')[0];
+const ov=$('ov');
+function showModal(node){
+  ov.innerHTML='';const m=el('div','md');
+  const x=el('button','x','×');x.setAttribute('aria-label','Fechar');x.onclick=closeModal;
+  m.append(x,node);ov.append(m);ov.classList.remove('hidden');
+  const i=m.querySelector('input');if(i){i.focus();i.select()}
+}
+function closeModal(){ov.classList.add('hidden');ov.innerHTML=''}
+ov.onmousedown=e=>{if(e.target===ov)closeModal()};
+addEventListener('keydown',e=>{if(e.key==='Escape')closeModal()});
+const view=h=>{const d=el('div');d.innerHTML=h;return d};
+const say=(d,t)=>d.querySelector('.err').textContent=t;
+const enter=(inp,fn)=>inp.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();fn()}};
+
+function chooseView(){
+  const d=view(`<div class="pad"><h2>Criar seu servidor</h2><p>Seu servidor é onde você e seus amigos se reúnem. Crie o seu e comece a interagir.</p>
+    <button class="opt" id="oCreate"><span class="ic">+</span>Criar o meu<span class="arr">›</span></button></div>`);
+  d.querySelector('#oCreate').onclick=createView;
+  showModal(d);
+}
+function createView(){
+  const d=view(`<div class="pad"><h2>Personalize seu servidor</h2><p>Dê uma personalidade ao seu novo servidor escolhendo um nome.</p>
+    <label class="lb" for="mIn">Nome do servidor</label><input id="mIn" maxlength="32"><div class="err"></div></div>
+    <div class="foot2"><button class="b2 lnk" id="mBack">Voltar</button><button class="b2 pri" id="mOk">Criar</button></div>`);
+  const inp=d.querySelector('#mIn');inp.value='Servidor de '+myName();
+  const go=async()=>{
+    const name=inp.value.trim();if(!name)return say(d,'Dê um nome ao servidor.');
+    try{await createServer(name)}catch{say(d,'Não foi possível criar. Confira as regras do banco de dados.')}
+  };
+  d.querySelector('#mBack').onclick=chooseView;d.querySelector('#mOk').onclick=go;enter(inp,go);
+  showModal(d);
+}
+function newChatView(){
+  const d=view(`<div class="pad"><h2>Nova conversa</h2><p>Converse com uma pessoa ou crie um grupo.</p>
+    <button class="opt" id="oDm"><span class="ic">@</span>Mensagem direta<span class="arr">›</span></button>
+    <button class="opt" id="oGp" style="margin-top:8px"><span class="ic">+</span>Criar grupo<span class="arr">›</span></button></div>`);
+  d.querySelector('#oDm').onclick=dmView;d.querySelector('#oGp').onclick=groupView;
+  showModal(d);
+}
+async function loadUsers(){
+  const u=(await get(ref(db,'users'))).val()||{};delete u[me.uid];
+  return Object.entries(u).map(([uid,v])=>({uid,name:v.name||'?'})).sort((a,b)=>a.name.localeCompare(b.name));
+}
+function dmView(){
+  const d=view(`<div class="pad"><h2>Mensagem direta</h2><p>Escolha uma pessoa para conversar.</p>
+    <input id="mIn" placeholder="Buscar por nome" autocomplete="off"><div class="ulist"></div><div class="err"></div></div>
+    <div class="foot2"><button class="b2 lnk" id="mBack">Voltar</button></div>`);
+  const list=d.querySelector('.ulist'),inp=d.querySelector('#mIn');let all=[];
+  const draw=()=>{
+    const q=inp.value.toLowerCase(),f=all.filter(u=>u.name.toLowerCase().includes(q));list.innerHTML='';
+    if(!f.length)list.append(el('div','uempty',all.length?'Ninguém encontrado.':'Ainda não há outras pessoas cadastradas.'));
+    for(const u of f){const r=el('button','urow');r.append(avatar(u.name,u.uid),el('span','',u.name));
+      r.onclick=()=>openDm(u).catch(()=>say(d,'Não foi possível abrir a conversa.'));list.append(r)}
+  };
+  inp.oninput=draw;d.querySelector('#mBack').onclick=newChatView;
+  loadUsers().then(u=>{all=u;draw()}).catch(()=>say(d,'Não foi possível carregar as pessoas.'));
+  showModal(d);
+}
+function groupView(){
+  const d=view(`<div class="pad"><h2>Criar grupo</h2><p>Dê um nome ao grupo e escolha quem vai participar.</p>
+    <label class="lb" for="gName">Nome do grupo</label><input id="gName" maxlength="32" autocomplete="off">
+    <label class="lb" style="margin-top:16px">Participantes</label><div class="ulist"></div><div class="err"></div></div>
+    <div class="foot2"><button class="b2 lnk" id="mBack">Voltar</button><button class="b2 pri" id="mOk">Criar grupo</button></div>`);
+  const list=d.querySelector('.ulist'),sel=new Set();let all=[];
+  d.querySelector('#gName').value='Grupo de '+myName();
+  loadUsers().then(u=>{
+    all=u;if(!u.length)list.append(el('div','uempty','Ainda não há outras pessoas cadastradas.'));
+    for(const x of u){
+      const r=el('label','urow'),c=document.createElement('input');c.type='checkbox';
+      c.onchange=()=>c.checked?sel.add(x.uid):sel.delete(x.uid);
+      r.append(c,avatar(x.name,x.uid),el('span','',x.name));list.append(r);
+    }
+  }).catch(()=>say(d,'Não foi possível carregar as pessoas.'));
+  d.querySelector('#mBack').onclick=newChatView;
+  d.querySelector('#mOk').onclick=async()=>{
+    const name=d.querySelector('#gName').value.trim();
+    if(!name)return say(d,'Dê um nome ao grupo.');
+    if(!sel.size)return say(d,'Escolha pelo menos uma pessoa.');
+    try{await createGroup(name,all.filter(u=>sel.has(u.uid)))}catch{say(d,'Não foi possível criar o grupo.')}
+  };
+  showModal(d);
+}
+function channelView(){
+  const d=view(`<div class="pad"><h2>Criar canal</h2><p>Canais de texto são onde a conversa acontece.</p>
+    <label class="lb" for="mIn">Nome do canal</label><input id="mIn" maxlength="32" placeholder="novo-canal" autocomplete="off"><div class="err"></div></div>
+    <div class="foot2"><button class="b2 lnk" id="mBack">Cancelar</button><button class="b2 pri" id="mOk">Criar canal</button></div>`);
+  const inp=d.querySelector('#mIn');
+  const go=async()=>{
+    const name=inp.value.trim().toLowerCase().replace(/\s+/g,'-');if(!name)return say(d,'Dê um nome ao canal.');
+    try{await set(push(ref(db,'channels/'+cur.sid)),{name});closeModal()}catch{say(d,'Não foi possível criar o canal.')}
+  };
+  d.querySelector('#mBack').onclick=closeModal;d.querySelector('#mOk').onclick=go;enter(inp,go);
+  showModal(d);
+}
+function inviteView(){
+  const d=view(`<div class="pad"><h2>Convide seus amigos</h2><p>Envie este link para quem você quer chamar. Quando alguém colar no chat, aparece o convite com o botão Entrar.</p>
+    <label class="lb" for="mIn">Link de convite</label><div class="copy"><input id="mIn" readonly><button class="b2 pri" id="mCp">Copiar</button></div><div class="err"></div></div>`);
+  const inp=d.querySelector('#mIn'),link=linkOf(cur.sid);inp.value=link;
+  d.querySelector('#mCp').onclick=async e=>{
+    try{await navigator.clipboard.writeText(link);e.target.textContent='Copiado!'}
+    catch{inp.select();say(d,'Selecione e copie o link manualmente.')}
+  };
+  showModal(d);
+}
+
+/* ---------- Criar / entrar ---------- */
+async function createServer(name){
+  const sid=push(ref(db,'servers')).key,cid=push(ref(db,'channels/'+sid)).key;
   await update(ref(db),{
-    ['servers/'+sid]:{name,owner:me.uid,members:{[me.uid]:{name:n}}},
+    ['servers/'+sid]:{name,owner:me.uid,members:{[me.uid]:{name:myName()}}},
     ['channels/'+sid+'/'+cid]:{name:'geral'},
     ['userServers/'+me.uid+'/'+sid]:{name}
   });
-  pickServer(sid,name);
+  closeModal();pickServer(sid,name);
 }
-async function joinServer(){
-  const sid=(prompt('Cole o código de convite do servidor:')||'').trim();if(!sid)return;
+async function joinServer(sid){
   const s=await get(ref(db,'servers/'+sid+'/name'));
-  if(!s.exists()){alert('Servidor não encontrado.');return}
-  const n=me.displayName||me.email.split('@')[0];
-  await update(ref(db),{['servers/'+sid+'/members/'+me.uid]:{name:n},['userServers/'+me.uid+'/'+sid]:{name:s.val()}});
-  pickServer(sid,s.val());
+  if(!s.exists())throw 'nf';
+  await update(ref(db),{['servers/'+sid+'/members/'+me.uid]:{name:myName()},['userServers/'+me.uid+'/'+sid]:{name:s.val()}});
+  closeModal();pickServer(sid,s.val());
 }
-$('invite').onclick=async()=>{
-  try{await navigator.clipboard.writeText(cur.sid);alert('Código de convite copiado! Envie para seus amigos.')}
-  catch{prompt('Código de convite:',cur.sid)}
-};
-function clearServer(){
-  stop('ch');stop('mem');stop('msg');cur={sid:null,cid:null};members={};
-  $('sTitle').textContent='Concord';$('invite').classList.add('hidden');
-  $('chans').innerHTML='';$('chtitle').innerHTML='';$('members').innerHTML='';
-  $('msgs').innerHTML='';const e=el('div','empty');e.append(el('h2','','Bem-vindo ao Concord'),el('div','','Crie um servidor (+) ou entre com um código de convite (→).'));$('msgs').append(e);
-  $('msgIn').disabled=true;$('msgIn').placeholder='Selecione um canal';
+$('invite').onclick=inviteView;
+/* ---------- Mensagens diretas ---------- */
+function goHome(){
+  ['ch','mem','msg','dm'].forEach(stop);cur={sid:null,cid:null,dm:null,home:true};members={};
+  document.querySelectorAll('.sv').forEach(b=>b.classList.toggle('on',b.id==='homeBtn'));
+  $('sTitle').textContent='Mensagens diretas';$('invite').classList.add('hidden');
+  $('chtitle').innerHTML='';$('members').innerHTML='';
+  const box=$('msgs');box.innerHTML='';
+  const e=el('div','empty');e.append(el('h2','','Suas conversas'),el('div','','Escolha uma conversa à esquerda ou comece uma nova.'));box.append(e);
+  $('msgIn').disabled=true;$('msgIn').placeholder='Selecione uma conversa';
+  un.dm=onValue(ref(db,'userDms/'+me.uid),s=>drawDms(s.val()||{}));
+}
+function drawDms(list){
+  const box=$('chans');box.innerHTML='';
+  const f=el('button','find','Encontre ou comece uma conversa');f.onclick=newChatView;box.append(f);
+  const h=el('div','chead');h.append(el('span','','Mensagens diretas'));
+  const add=el('button','','+');add.title='Nova conversa ou grupo';add.onclick=newChatView;h.append(add);box.append(h);
+  const ids=Object.keys(list).sort((a,b)=>(list[b].ts||0)-(list[a].ts||0));
+  if(!ids.length)box.append(el('div','empty','Nenhuma conversa ainda. Use o + para começar.'));
+  for(const id of ids){
+    const d=list[id],b=el('button','ch dm'+(id===cur.dm?' on':''));b.dataset.id=id;
+    b.append(avatar(d.name,d.group?id:d.peer),el('span','',d.name));b.onclick=()=>pickDm(id,d);box.append(b);
+  }
+}
+function pickDm(id,d){
+  stop('msg');stop('mem');cur.dm=id;
+  document.querySelectorAll('.ch.dm').forEach(b=>b.classList.toggle('on',b.dataset.id===id));
+  un.mem=onValue(ref(db,'dms/'+id+'/members'),s=>{members=s.val()||{};drawMembers()});
+  last=null;
+  const t=$('chtitle');t.innerHTML='';t.append(el('i','',d.group?'👥':'@'),document.createTextNode(d.name));
+  const box=$('msgs');box.innerHTML='';
+  const e=el('div','empty');e.id='emptyMsg';
+  e.append(el('h2','',d.group?'Bem-vindo ao grupo '+d.name:'Conversa com '+d.name),el('div','','Este é o começo da conversa. Mande a primeira mensagem!'));box.append(e);
+  const inp=$('msgIn');inp.disabled=false;inp.placeholder=d.group?'Conversar em '+d.name:'Conversar com '+d.name;inp.focus();
+  un.msg=onChildAdded(query(ref(db,'dmMessages/'+id),limitToLast(100)),s=>addMsg(s.val()));
+}
+function openDmView(id,d){if(!cur.home)goHome();pickDm(id,d)}
+async function openDm(u){
+  const id=[me.uid,u.uid].sort().join('_'),ts=Date.now();
+  let d=(await get(ref(db,'userDms/'+me.uid+'/'+id))).val();
+  if(!d){
+    d={group:false,name:u.name,peer:u.uid,ts};
+    await update(ref(db),{
+      ['dms/'+id]:{group:false,members:{[me.uid]:{name:myName()},[u.uid]:{name:u.name}}},
+      ['userDms/'+me.uid+'/'+id]:d,
+      ['userDms/'+u.uid+'/'+id]:{group:false,name:myName(),peer:me.uid,ts}
+    });
+  }
+  closeModal();openDmView(id,d);
+}
+async function createGroup(name,people){
+  const id=push(ref(db,'dms')).key,ts=Date.now(),mem={[me.uid]:{name:myName()}},up={};
+  people.forEach(x=>mem[x.uid]={name:x.name});
+  up['dms/'+id]={group:true,name,owner:me.uid,members:mem};
+  Object.keys(mem).forEach(u=>up['userDms/'+u+'/'+id]={group:true,name,ts});
+  await update(ref(db),up);
+  closeModal();openDmView(id,{group:true,name,ts});
 }
 function pickServer(sid,name){
   if(cur.sid===sid&&un.ch)return;
-  stop('ch');stop('mem');stop('msg');cur={sid,cid:null};
+  stop('ch');stop('mem');stop('msg');stop('dm');cur={sid,cid:null};
   $('sTitle').textContent=name;$('invite').classList.remove('hidden');
   document.querySelectorAll('.sv').forEach(b=>b.classList.toggle('on',b.title===name));
   un.ch=onValue(ref(db,'channels/'+sid),s=>{
@@ -269,15 +475,11 @@ function pickServer(sid,name){
 function drawChannels(chs){
   const box=$('chans');box.innerHTML='';
   const h=el('div','chead');h.append(el('span','','Canais de texto'));
-  const add=el('button','','+');add.title='Criar canal';add.onclick=newChannel;h.append(add);box.append(h);
+  const add=el('button','','+');add.title='Criar canal';add.onclick=channelView;h.append(add);box.append(h);
   for(const [cid,c] of Object.entries(chs)){
     const b=el('button','ch'+(cid===cur.cid?' on':''));b.append(el('i','','#'),document.createTextNode(c.name));
     b.onclick=()=>pickChannel(cid,c.name);box.append(b);
   }
-}
-async function newChannel(){
-  const raw=(prompt('Nome do novo canal:')||'').trim().toLowerCase().replace(/\s+/g,'-');if(!raw)return;
-  await set(push(ref(db,'channels/'+cur.sid)),{name:raw});
 }
 function pickChannel(cid,name){
   stop('msg');cur.cid=cid;last=null;
@@ -287,6 +489,49 @@ function pickChannel(cid,name){
   const e=el('div','empty');e.id='emptyMsg';e.append(el('h2','','Bem-vindo ao #'+name),el('div','','Este é o começo do canal. Mande a primeira mensagem!'));box.append(e);
   const inp=$('msgIn');inp.disabled=false;inp.placeholder='Conversar em #'+name;inp.focus();
   un.msg=onChildAdded(query(ref(db,'messages/'+cur.sid+'/'+cid),limitToLast(100)),s=>addMsg(s.val()));
+}
+
+/* ---------- Convite por link ---------- */
+const KEY=/^[-\w]{10,}$/;
+const linkOf=sid=>location.origin+location.pathname+'?convite='+sid;
+
+function richText(text){
+  const d=el('div','tx');let i=0,inv=null;
+  for(const m of text.matchAll(/https?:\/\/[^\s<>]+/g)){
+    d.append(document.createTextNode(text.slice(i,m.index)));
+    const a=el('a','',m[0]);a.href=m[0];d.append(a);
+    i=m.index+m[0].length;
+    if(!inv){try{const k=new URL(m[0]).searchParams.get('convite');if(k&&KEY.test(k))inv=k}catch{}}
+  }
+  d.append(document.createTextNode(text.slice(i)));
+  return [d,inv];
+}
+
+function inviteCard(sid,head=true){
+  const c=el('div','inv');
+  if(head)c.append(el('div','invh','Você foi convidado para entrar em um servidor'));
+  const row=el('div','invr'),ic=el('div','invic','…'),info=el('div','invi'),nm=el('b','','Carregando…'),ct=el('small','','\u00a0');
+  const btn=el('button','b2 pri','Entrar');btn.disabled=true;
+  info.append(nm,ct);row.append(ic,info,btn);c.append(row);
+  get(ref(db,'servers/'+sid)).then(s=>{
+    if(!s.exists()){ic.textContent='?';nm.textContent='Convite inválido';ct.textContent='Este servidor não existe.';btn.textContent='Entrar';return}
+    const v=s.val(),n=Object.keys(v.members||{}).length,joined=!!(v.members&&v.members[me.uid]);
+    ic.textContent=v.name.slice(0,2).toUpperCase();nm.textContent=v.name;
+    ct.textContent=n+(n===1?' membro':' membros');
+    btn.textContent=joined?'Ir para o servidor':'Entrar';btn.disabled=false;
+    btn.onclick=async()=>{
+      btn.disabled=true;
+      try{if(joined){closeModal();pickServer(sid,v.name)}else await joinServer(sid)}
+      catch{btn.disabled=false;ct.textContent='Não foi possível entrar. Tente de novo.'}
+    };
+  }).catch(()=>{nm.textContent='Convite indisponível';ct.textContent='Não foi possível carregar.';ic.textContent='?'});
+  return c;
+}
+function inviteModal(sid){
+  if(!KEY.test(sid))return;
+  const d=view(`<div class="pad"><h2>Convite recebido</h2><p>Alguém chamou você para um servidor no Concord.</p><div class="slot"></div></div>`);
+  d.querySelector('.slot').append(inviteCard(sid,false));
+  showModal(d);
 }
 
 /* ---------- Mensagens ---------- */
@@ -299,14 +544,15 @@ function addMsg(m){
   if(grouped){row.append(el('div','sp',hm))}else row.append(avatar(m.name,m.uid));
   const bd=el('div','bd');
   if(!grouped){const h=el('div','hd');h.append(el('b','',m.name),el('span','',d.toLocaleDateString('pt-BR')+' '+hm));bd.append(h)}
-  bd.append(el('div','tx',m.text));row.append(bd);box.append(row);
+  const [tx,inv]=richText(m.text);bd.append(tx);if(inv)bd.append(inviteCard(inv));
+  row.append(bd);box.append(row);
   last=m;if(stick||m.uid===me.uid)box.scrollTop=box.scrollHeight;
 }
 $('form').onsubmit=async ev=>{
   ev.preventDefault();
-  const inp=$('msgIn'),text=inp.value.trim();if(!text||!cur.cid)return;
+  const inp=$('msgIn'),text=inp.value.trim();if(!text||!(cur.cid||cur.dm))return;
   inp.value='';
-  await set(push(ref(db,'messages/'+cur.sid+'/'+cur.cid)),{uid:me.uid,name:me.displayName||me.email.split('@')[0],text:text.slice(0,2000),ts:Date.now()});
+  await set(push(ref(db,cur.dm?'dmMessages/'+cur.dm:'messages/'+cur.sid+'/'+cur.cid)),{uid:me.uid,name:me.displayName||me.email.split('@')[0],text:text.slice(0,2000),ts:Date.now()});
 };
 
 /* ---------- Membros ---------- */
