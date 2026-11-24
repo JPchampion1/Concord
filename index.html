@@ -193,6 +193,20 @@ button{cursor:pointer;border:0}
 .at b{color:var(--mut)}.md .at input{height:100%;padding:0;background:none}
 .ok2{color:#7fd33a}
 body[data-req]:not([data-req="0"]) #homeBtn::after{content:"";position:absolute;right:-2px;top:-2px;width:12px;height:12px;border-radius:50%;background:var(--err);border:3px solid var(--bg1);box-sizing:content-box}
+/* ---------- STATUS ---------- */
+#meSt{cursor:pointer}#meSt:hover{text-decoration:underline;color:var(--txt)}
+.sdot{position:relative;display:inline-block;width:16px;height:16px;border-radius:50%;flex:none}
+.dot.online,.sdot.online{background:#23a55a}
+.dot.idle,.sdot.idle,body[data-st="idle"] #meAv .dot{background:#f0b232}
+.dot.dnd,.sdot.dnd,body[data-st="dnd"] #meAv .dot{background:#f23f42}
+.dot.off,.sdot.off,body[data-st="offline"] #meAv .dot{background:#80848e}
+.dot.idle::after,.sdot.idle::after,body[data-st="idle"] #meAv .dot::after{content:"";position:absolute;width:60%;height:60%;left:-12%;top:-12%;border-radius:50%;background:var(--bg2)}
+.dot.dnd::after,.sdot.dnd::after,body[data-st="dnd"] #meAv .dot::after{content:"";position:absolute;left:18%;right:18%;top:40%;height:20%;border-radius:2px;background:var(--bg2)}
+.sdot.idle::after,.sdot.dnd::after{background:var(--bg3)}
+.stl .opt+.opt{margin-top:8px}
+.opt.on{border-color:var(--brand)}
+.stt{display:flex;flex-direction:column;font-weight:500}
+.stt small{font-weight:400;font-size:12px;color:var(--mut)}
 /* ---------- CELULAR / TABLET ---------- */
 #top{display:contents}
 #navBtn,#memBtn{display:none;width:40px;height:40px;flex:none;border-radius:8px;background:none;color:var(--mut);font-size:22px;line-height:1}
@@ -262,7 +276,7 @@ body[data-req]:not([data-req="0"]) #homeBtn::after{content:"";position:absolute;
     <div id="chans"></div>
     <div id="me">
       <div class="av" id="meAv"><span class="dot"></span></div>
-      <div class="nm"><span id="meName"></span><small>Online</small></div>
+      <div class="nm"><span id="meName"></span><small id="meSt" title="Mudar status">Online</small></div>
       <button id="logout" title="Sair">Sair</button>
     </div>
   </aside>
@@ -354,6 +368,7 @@ $('authForm').onsubmit=async ev=>{
   }catch(x){regBusy=false;fail(x)}
 };
 $('logout').onclick=()=>signOut(auth);
+$('meSt').onclick=e=>{e.stopPropagation();statusView()};
 $('me').onclick=e=>{if(!e.target.closest('#logout'))profileView(me.uid)};
 
 /* ---------- Estado ---------- */
@@ -361,6 +376,23 @@ let inviteParam=new URLSearchParams(location.search).get('convite');
 let me=null,cur={sid:null,cid:null},un={srv:null,ch:null,mem:null,msg:null},pres={},members={},last=null;
 const stop=k=>{if(un[k]){un[k]();un[k]=null}};
 
+const ST={online:['Online','Disponível'],idle:['Ausente','Você parece estar fora'],dnd:['Não perturbe','Sem notificações'],offline:['Offline','Você aparece offline para todos']};
+const stOf=v=>v===true?'online':(ST[v]?v:'offline'),stCls=st=>st==='offline'?'off':st;
+let myStatus='online';
+const paintMe=()=>{document.body.dataset.st=myStatus;$('meSt').textContent=ST[myStatus][0]};
+async function setStatus(st){
+  myStatus=st;paintMe();closeModal();
+  try{await set(ref(db,'presence/'+me.uid),st);await update(ref(db,'users/'+me.uid),{status:st})}catch{}
+}
+function statusView(){
+  const d=view('<div class="pad"><h2>Definir status</h2><p>Escolha como você aparece para os outros.</p><div class="stl"></div></div>');
+  for(const k of Object.keys(ST)){
+    const b=el('button','opt'+(k===myStatus?' on':''));
+    b.innerHTML=`<span class="sdot ${stCls(k)}"></span><span class="stt">${ST[k][0]}<small>${ST[k][1]}</small></span>`;
+    b.onclick=()=>setStatus(k);d.querySelector('.stl').append(b);
+  }
+  showModal(d);
+}
 const UN_RE=/^[a-z0-9_.]{2,20}$/,cleanUser=v=>v.trim().replace(/^@/,'').toLowerCase();
 let regBusy=false,myUser='',friendList={},reqList={},dmList={};
 async function claimUsername(h){
@@ -399,7 +431,10 @@ onAuthStateChanged(auth,u=>{
   stop('rq');un.rq=onValue(ref(db,'friendRequests/'+u.uid),s=>{reqList=s.val()||{};document.body.dataset.req=Object.keys(reqList).length;if(cur.home)drawDms()});
   // presença
   const pr=ref(db,'presence/'+u.uid);
-  onValue(ref(db,'.info/connected'),s=>{if(s.val()){onDisconnect(pr).set(false);set(pr,true)}});
+  get(ref(db,'users/'+u.uid+'/status')).then(v=>v.val()).catch(()=>null).then(v=>{
+    myStatus=ST[v]?v:'online';paintMe();
+    onValue(ref(db,'.info/connected'),s=>{if(s.val()){onDisconnect(pr).set('offline');set(pr,myStatus)}});
+  });
   onValue(ref(db,'presence'),s=>{pres=s.val()||{};drawMembers()});
   onValue(ref(db,'avatars'),s=>{photos=s.val()||{};document.querySelectorAll('.av[data-uid]').forEach(applyPhoto)});
   // servidores
@@ -487,7 +522,7 @@ async function profileView(uid){
     <div class="pcard"><h4>Sobre mim</h4><div class="pbio"></div><h4>Membro desde</h4><div class="psince"></div></div><div class="phint"></div><div class="pfoot"></div></div>`);
   const av=avatar(name,uid);av.classList.add('big');d.querySelector('.pav').append(av);
   const nm=d.querySelector('.pname'),bo=d.querySelector('.pbio'),act=d.querySelector('.pact'),hint=d.querySelector('.phint'),foot=d.querySelector('.pfoot');
-  const dot=el('span','dot'+(pres[uid]?'':' off'));av.append(dot); // bolinha de status no avatar
+  const dot=el('span','dot '+stCls(stOf(pres[uid])));av.append(dot); // bolinha de status no avatar
   d.querySelector('.psince').textContent=since?new Date(since).toLocaleDateString('pt-BR',{day:'numeric',month:'long',year:'numeric'}):'—';
 
   const show=()=>{ // modo visualização
@@ -867,13 +902,13 @@ $('msgIn').onpaste=e=>{
 /* ---------- Membros ---------- */
 function drawMembers(){
   const box=$('members');if(!me)return;box.innerHTML='';
-  const arr=Object.entries(members).map(([uid,m])=>({uid,name:m.name,on:!!pres[uid]}));
+  const arr=Object.entries(members).map(([uid,m])=>({uid,name:m.name,st:stOf(pres[uid])}));
   for(const [label,on] of [['Online',true],['Offline',false]]){
-    const g=arr.filter(x=>x.on===on).sort((a,b)=>a.name.localeCompare(b.name));
+    const g=arr.filter(x=>(x.st!=='offline')===on).sort((a,b)=>a.name.localeCompare(b.name));
     if(!g.length)continue;
     box.append(el('h3','',label+' — '+g.length));
     for(const x of g){
-      const r=el('div','mb'+(on?'':' off')),a=avatar(x.name,x.uid);a.append(el('span','dot'));
+      const r=el('div','mb'+(on?'':' off')),a=avatar(x.name,x.uid);a.append(el('span','dot '+stCls(x.st)));
       r.append(a,el('span','',x.name));r.onclick=()=>profileView(x.uid);box.append(r);
     }
   }
