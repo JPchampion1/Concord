@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Concord</title>
+<style>
+@font-face{font-family:"gg sans";src:url("ggsans-Normal.woff2") format("woff2");font-weight:400}
+@font-face{font-family:"gg sans";src:url("ggsans-Medium.woff2") format("woff2");font-weight:500}
+@font-face{font-family:"gg sans";src:url("ggsans-Semibold.woff2") format("woff2");font-weight:600}
+@font-face{font-family:"gg sans";src:url("ggsans-Bold.woff2") format("woff2");font-weight:700}
+:root{--brand:#5cb814;--brand-h:#4e9c10;--bg1:#1e1f22;--bg2:#2b2d31;--bg3:#313338;--hov:#35373c;--txt:#f2f3f5;--mut:#949ba4;--inp:#1e1f22;--err:#f23f42}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{font-family:"gg sans","Noto Sans","Helvetica Neue",Helvetica,Arial,sans-serif;background:var(--bg3);color:var(--txt);overflow:hidden;font-size:16px}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer;border:0}
+:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+.hidden{display:none!important}
+
+/* ---------- LOGIN ---------- */
+#auth{height:100%;display:flex;align-items:center;justify-content:center;padding:16px;background:radial-gradient(circle at 20% 15%,#2f5f12 0,transparent 45%),radial-gradient(circle at 85% 90%,#1d3d0b 0,transparent 50%),var(--bg1)}
+.card{width:100%;max-width:480px;background:var(--bg3);border-radius:8px;padding:32px;box-shadow:0 2px 10px rgba(0,0,0,.4)}
+.card h1{margin:0 0 8px;font-size:24px;font-weight:600;text-align:center}
+.card .sub{margin:0 0 20px;text-align:center;color:var(--mut)}
+.card label{display:block;margin:16px 0 8px;font-size:12px;font-weight:700;color:#b5bac1;text-transform:uppercase}
+.card input{width:100%;height:40px;padding:10px;border:0;border-radius:3px;background:var(--inp)}
+.link{background:none;color:#7fd33a;padding:0;font-size:14px}
+.link:hover{text-decoration:underline}
+.btn{width:100%;height:44px;margin-top:20px;border-radius:3px;background:var(--brand);color:#0b1a02;font-weight:600;transition:background-color .17s}
+.btn:hover{background:var(--brand-h)}
+.err{margin-top:12px;min-height:18px;font-size:14px;color:var(--err)}
+.foot{margin-top:8px;font-size:14px;color:var(--mut)}
+
+/* ---------- APP ---------- */
+#app{height:100%;display:grid;grid-template-columns:72px 240px 1fr 240px}
+#servers{background:var(--bg1);display:flex;flex-direction:column;align-items:center;gap:8px;padding:12px 0;overflow-y:auto}
+.sv{width:48px;height:48px;border-radius:50%;background:var(--bg3);font-weight:600;transition:border-radius .17s,background-color .17s;position:relative;flex:none}
+.sv:hover,.sv.on{border-radius:16px;background:var(--brand);color:#0b1a02}
+.sv.add{color:var(--brand);font-size:24px}
+.sv.add:hover{color:#0b1a02}
+.sep{width:32px;height:2px;background:var(--hov);border-radius:1px;flex:none}
+#side{background:var(--bg2);display:flex;flex-direction:column;min-width:0}
+#sname{height:48px;padding:0 16px;display:flex;align-items:center;justify-content:space-between;font-weight:600;border-bottom:1px solid var(--bg1);box-shadow:0 1px 0 rgba(0,0,0,.1)}
+#sname button{background:none;color:var(--mut);font-size:12px}
+#sname button:hover{color:var(--txt)}
+#chans{flex:1;overflow-y:auto;padding:16px 8px}
+.chead{display:flex;justify-content:space-between;padding:0 8px 4px;font-size:12px;font-weight:600;color:var(--mut)}
+.chead button{background:none;color:var(--mut);font-size:18px;line-height:1}
+.chead button:hover{color:var(--txt)}
+.ch{display:block;width:100%;text-align:left;padding:6px 8px;border-radius:4px;background:none;color:var(--mut);font-weight:500}
+.ch:hover{background:var(--hov);color:#dbdee1}
+.ch.on{background:#404249;color:#fff}
+.ch i{font-style:normal;opacity:.7;margin-right:6px}
+#me{height:52px;background:#232428;display:flex;align-items:center;gap:8px;padding:0 8px}
+#me .nm{flex:1;min-width:0;font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#me .nm small{display:block;font-weight:400;font-size:12px;color:var(--mut)}
+#me button{background:none;color:var(--mut);font-size:12px;padding:6px;border-radius:4px}
+#me button:hover{background:var(--hov);color:var(--txt)}
+.av{width:36px;height:36px;border-radius:50%;flex:none;display:grid;place-items:center;font-weight:600;font-size:15px;color:#0b1a02;position:relative}
+#main{display:flex;flex-direction:column;min-width:0;min-height:0}
+#chtitle{height:48px;padding:0 16px;display:flex;align-items:center;font-weight:600;border-bottom:1px solid var(--bg1);box-shadow:0 1px 0 rgba(0,0,0,.1)}
+#chtitle i{font-style:normal;color:var(--mut);margin-right:8px;font-size:22px}
+#msgs{flex:1;overflow-y:auto;padding:16px 0}
+.empty{padding:32px 16px;color:var(--mut)}
+.empty h2{color:var(--txt);margin:0 0 4px}
+.m{display:flex;gap:16px;padding:2px 16px 2px 16px}
+.m:hover{background:rgba(2,2,2,.06)}
+.m.first{margin-top:16px;padding-top:4px}
+.m .av{width:40px;height:40px;margin-top:2px}
+.m .sp{width:40px;flex:none;font-size:11px;color:var(--mut);text-align:right;opacity:0;line-height:22px}
+.m:hover .sp{opacity:1}
+.m .bd{min-width:0}
+.m .hd{line-height:22px}
+.m .hd b{font-weight:600;margin-right:8px}
+.m .hd span{font-size:12px;color:var(--mut)}
+.m .tx{line-height:22px;white-space:pre-wrap;overflow-wrap:anywhere;color:#dbdee1}
+#form{padding:0 16px 24px}
+#form input{width:100%;height:44px;padding:0 16px;border:0;border-radius:8px;background:#383a40}
+#form input::placeholder{color:var(--mut)}
+#members{background:var(--bg2);overflow-y:auto;padding:16px 8px}
+#members h3{margin:8px 8px 4px;font-size:12px;font-weight:600;color:var(--mut)}
+.mb{display:flex;align-items:center;gap:12px;padding:6px 8px;border-radius:4px;font-weight:500}
+.mb:hover{background:var(--hov)}
+.mb.off{opacity:.45}
+.mb .av{width:32px;height:32px;font-size:13px}
+.dot{position:absolute;right:-2px;bottom:-2px;width:12px;height:12px;border-radius:50%;background:#23a55a;border:3px solid var(--bg2);box-sizing:content-box;width:10px;height:10px}
+.mb.off .dot{background:#80848e}
+@media(max-width:900px){#app{grid-template-columns:72px 200px 1fr}#members{display:none}}
+@media(max-width:560px){#app{grid-template-columns:60px 1fr}#side{display:none}.sv{width:42px;height:42px}}
+</style>
+</head>
+<body>
+
+<!-- LOGIN / REGISTRO (sem QR code) -->
+<div id="auth">
+  <form class="card" id="authForm">
+    <h1 id="aTitle">Bem-vindo de volta!</h1>
+    <p class="sub" id="aSub">Estamos muito animados em ver você de novo!</p>
+    <div id="nameWrap" class="hidden">
+      <label for="aName">Nome de usuário</label>
+      <input id="aName" maxlength="24" autocomplete="username">
+    </div>
+    <label for="aEmail">E-mail</label>
+    <input id="aEmail" type="email" required autocomplete="email">
+    <label for="aPass">Senha</label>
+    <input id="aPass" type="password" required minlength="6" autocomplete="current-password">
+    <div style="margin-top:8px"><button type="button" class="link" id="forgot">Esqueceu sua senha?</button></div>
+    <button class="btn" id="aBtn">Entrar</button>
+    <div class="err" id="aErr"></div>
+    <div class="foot"><span id="aAsk">Precisa de uma conta?</span> <button type="button" class="link" id="aSwitch">Registre-se</button></div>
+  </form>
+</div>
+
+<!-- APP -->
+<div id="app" class="hidden">
+  <nav id="servers" aria-label="Servidores"></nav>
+  <aside id="side">
+    <div id="sname"><span id="sTitle">Concord</span><button id="invite" class="hidden" title="Copiar código de convite">Convite</button></div>
+    <div id="chans"></div>
+    <div id="me">
+      <div class="av" id="meAv"><span class="dot"></span></div>
+      <div class="nm"><span id="meName"></span><small>Online</small></div>
+      <button id="logout" title="Sair">Sair</button>
+    </div>
+  </aside>
+  <main id="main">
+    <div id="chtitle"></div>
+    <div id="msgs"></div>
+    <form id="form"><input id="msgIn" autocomplete="off" disabled placeholder="Selecione um canal"></form>
+  </main>
+  <aside id="members"></aside>
+</div>
+
+<script type="module">
+import {initializeApp} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+import {getAuth,onAuthStateChanged,signInWithEmailAndPassword,createUserWithEmailAndPassword,updateProfile,signOut,sendPasswordResetEmail} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
+import {getDatabase,ref,push,set,get,update,onValue,onChildAdded,query,limitToLast,onDisconnect} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js";
+
+const app=initializeApp({
+  apiKey:"AIzaSyBJsPaZOArWDvpzEz5sPCxBaJe_Yf7eoTg",
+  authDomain:"concord-cdc9c.firebaseapp.com",
+  databaseURL:"https://concord-cdc9c-default-rtdb.firebaseio.com",
+  projectId:"concord-cdc9c",
+  storageBucket:"concord-cdc9c.firebasestorage.app",
+  messagingSenderId:"663376374883",
+  appId:"1:663376374883:web:7f55fe6f4bec11bea09c56"
+});
+const auth=getAuth(app), db=getDatabase(app);
+const $=id=>document.getElementById(id);
+const el=(t,c,x)=>{const e=document.createElement(t);if(c)e.className=c;if(x!=null)e.textContent=x;return e};
+const colorOf=s=>{let h=0;for(const c of s)h=(h*31+c.charCodeAt(0))%360;return `hsl(${h} 60% 62%)`};
+const avatar=(name,uid)=>{const a=el('div','av',(name||'?')[0].toUpperCase());a.style.background=colorOf(uid||name);return a};
+
+/* ---------- Login / registro ---------- */
+let reg=false;
+const msgs={'auth/invalid-credential':'E-mail ou senha inválidos.','auth/email-already-in-use':'Esse e-mail já está em uso.','auth/weak-password':'A senha precisa ter pelo menos 6 caracteres.','auth/invalid-email':'E-mail inválido.','auth/too-many-requests':'Muitas tentativas. Tente de novo mais tarde.','auth/operation-not-allowed':'Ative o login por e-mail/senha no Firebase.'};
+const fail=e=>$('aErr').textContent=msgs[e.code]||('Erro: '+e.code);
+function mode(r){
+  reg=r;$('aErr').textContent='';
+  $('nameWrap').classList.toggle('hidden',!r);
+  $('aTitle').textContent=r?'Crie uma conta':'Bem-vindo de volta!';
+  $('aSub').textContent=r?'Entre para o Concord.':'Estamos muito animados em ver você de novo!';
+  $('aBtn').textContent=r?'Continuar':'Entrar';
+  $('aAsk').textContent=r?'Já tem uma conta?':'Precisa de uma conta?';
+  $('aSwitch').textContent=r?'Entrar':'Registre-se';
+  $('forgot').classList.toggle('hidden',r);
+}
+$('aSwitch').onclick=()=>mode(!reg);
+$('forgot').onclick=async()=>{
+  const e=$('aEmail').value.trim();
+  if(!e){$('aErr').textContent='Digite seu e-mail primeiro.';return}
+  try{await sendPasswordResetEmail(auth,e);$('aErr').style.color='#7fd33a';$('aErr').textContent='Enviamos um link de redefinição para o seu e-mail.'}catch(x){fail(x)}
+};
+$('authForm').onsubmit=async ev=>{
+  ev.preventDefault();$('aErr').style.color='';$('aErr').textContent='';
+  const em=$('aEmail').value.trim(),pw=$('aPass').value;
+  try{
+    if(reg){
+      const name=$('aName').value.trim()||em.split('@')[0];
+      const c=await createUserWithEmailAndPassword(auth,em,pw);
+      await updateProfile(c.user,{displayName:name});
+      await set(ref(db,'users/'+c.user.uid),{name});
+      $('meName').textContent=name;$('meAv').replaceWith(Object.assign(avatar(name,c.user.uid),{id:'meAv'}));
+    }else await signInWithEmailAndPassword(auth,em,pw);
+  }catch(x){fail(x)}
+};
+$('logout').onclick=()=>signOut(auth);
+
+/* ---------- Estado ---------- */
+let me=null,cur={sid:null,cid:null},un={srv:null,ch:null,mem:null,msg:null},pres={},members={},last=null;
+const stop=k=>{if(un[k]){un[k]();un[k]=null}};
+
+onAuthStateChanged(auth,u=>{
+  me=u;
+  $('auth').classList.toggle('hidden',!!u);
+  $('app').classList.toggle('hidden',!u);
+  if(!u){['srv','ch','mem','msg'].forEach(stop);cur={sid:null,cid:null};return}
+  const name=u.displayName||u.email.split('@')[0];
+  $('meName').textContent=name;
+  $('meAv').replaceWith(Object.assign(avatar(name,u.uid),{id:'meAv'}));
+  $('meAv').insertAdjacentHTML('beforeend','<span class="dot"></span>');
+  // presença
+  const pr=ref(db,'presence/'+u.uid);
+  onValue(ref(db,'.info/connected'),s=>{if(s.val()){onDisconnect(pr).set(false);set(pr,true)}});
+  onValue(ref(db,'presence'),s=>{pres=s.val()||{};drawMembers()});
+  // servidores
+  stop('srv');
+  un.srv=onValue(ref(db,'userServers/'+u.uid),s=>{
+    const list=s.val()||{};drawServers(list);
+    if(!list[cur.sid]){const first=Object.keys(list)[0];first?pickServer(first,list[first].name):clearServer()}
+  });
+});
+
+/* ---------- Servidores ---------- */
+function drawServers(list){
+  const nav=$('servers');nav.innerHTML='';
+  for(const [sid,s] of Object.entries(list)){
+    const b=el('button','sv'+(sid===cur.sid?' on':''),s.name.slice(0,2).toUpperCase());
+    b.title=s.name;b.onclick=()=>pickServer(sid,s.name);nav.append(b);
+  }
+  nav.append(el('div','sep'));
+  const add=el('button','sv add','+');add.title='Criar servidor';add.onclick=newServer;
+  const join=el('button','sv add','→');join.title='Entrar com código';join.onclick=joinServer;
+  nav.append(add,join);
+}
+async function newServer(){
+  const name=(prompt('Nome do novo servidor:')||'').trim();if(!name)return;
+  const sid=push(ref(db,'servers')).key,cid=push(ref(db,'channels/'+sid)).key,n=me.displayName||me.email.split('@')[0];
+  await update(ref(db),{
+    ['servers/'+sid]:{name,owner:me.uid,members:{[me.uid]:{name:n}}},
+    ['channels/'+sid+'/'+cid]:{name:'geral'},
+    ['userServers/'+me.uid+'/'+sid]:{name}
+  });
+  pickServer(sid,name);
+}
+async function joinServer(){
+  const sid=(prompt('Cole o código de convite do servidor:')||'').trim();if(!sid)return;
+  const s=await get(ref(db,'servers/'+sid+'/name'));
+  if(!s.exists()){alert('Servidor não encontrado.');return}
+  const n=me.displayName||me.email.split('@')[0];
+  await update(ref(db),{['servers/'+sid+'/members/'+me.uid]:{name:n},['userServers/'+me.uid+'/'+sid]:{name:s.val()}});
+  pickServer(sid,s.val());
+}
+$('invite').onclick=async()=>{
+  try{await navigator.clipboard.writeText(cur.sid);alert('Código de convite copiado! Envie para seus amigos.')}
+  catch{prompt('Código de convite:',cur.sid)}
+};
+function clearServer(){
+  stop('ch');stop('mem');stop('msg');cur={sid:null,cid:null};members={};
+  $('sTitle').textContent='Concord';$('invite').classList.add('hidden');
+  $('chans').innerHTML='';$('chtitle').innerHTML='';$('members').innerHTML='';
+  $('msgs').innerHTML='';const e=el('div','empty');e.append(el('h2','','Bem-vindo ao Concord'),el('div','','Crie um servidor (+) ou entre com um código de convite (→).'));$('msgs').append(e);
+  $('msgIn').disabled=true;$('msgIn').placeholder='Selecione um canal';
+}
+function pickServer(sid,name){
+  if(cur.sid===sid&&un.ch)return;
+  stop('ch');stop('mem');stop('msg');cur={sid,cid:null};
+  $('sTitle').textContent=name;$('invite').classList.remove('hidden');
+  document.querySelectorAll('.sv').forEach(b=>b.classList.toggle('on',b.title===name));
+  un.ch=onValue(ref(db,'channels/'+sid),s=>{
+    const chs=s.val()||{};drawChannels(chs);
+    if(!chs[cur.cid]){const f=Object.keys(chs)[0];if(f)pickChannel(f,chs[f].name)}
+  });
+  un.mem=onValue(ref(db,'servers/'+sid+'/members'),s=>{members=s.val()||{};drawMembers()});
+}
+
+/* ---------- Canais ---------- */
+function drawChannels(chs){
+  const box=$('chans');box.innerHTML='';
+  const h=el('div','chead');h.append(el('span','','Canais de texto'));
+  const add=el('button','','+');add.title='Criar canal';add.onclick=newChannel;h.append(add);box.append(h);
+  for(const [cid,c] of Object.entries(chs)){
+    const b=el('button','ch'+(cid===cur.cid?' on':''));b.append(el('i','','#'),document.createTextNode(c.name));
+    b.onclick=()=>pickChannel(cid,c.name);box.append(b);
+  }
+}
+async function newChannel(){
+  const raw=(prompt('Nome do novo canal:')||'').trim().toLowerCase().replace(/\s+/g,'-');if(!raw)return;
+  await set(push(ref(db,'channels/'+cur.sid)),{name:raw});
+}
+function pickChannel(cid,name){
+  stop('msg');cur.cid=cid;last=null;
+  document.querySelectorAll('.ch').forEach(b=>b.classList.toggle('on',b.lastChild.textContent===name));
+  const t=$('chtitle');t.innerHTML='';t.append(el('i','','#'),document.createTextNode(name));
+  const box=$('msgs');box.innerHTML='';
+  const e=el('div','empty');e.id='emptyMsg';e.append(el('h2','','Bem-vindo ao #'+name),el('div','','Este é o começo do canal. Mande a primeira mensagem!'));box.append(e);
+  const inp=$('msgIn');inp.disabled=false;inp.placeholder='Conversar em #'+name;inp.focus();
+  un.msg=onChildAdded(query(ref(db,'messages/'+cur.sid+'/'+cid),limitToLast(100)),s=>addMsg(s.val()));
+}
+
+/* ---------- Mensagens ---------- */
+function addMsg(m){
+  const box=$('msgs'),em=$('emptyMsg');if(em)em.remove();
+  const stick=box.scrollHeight-box.scrollTop-box.clientHeight<120;
+  const d=new Date(m.ts||Date.now()),hm=d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+  const grouped=last&&last.uid===m.uid&&m.ts-last.ts<300000;
+  const row=el('div','m'+(grouped?'':' first'));
+  if(grouped){row.append(el('div','sp',hm))}else row.append(avatar(m.name,m.uid));
+  const bd=el('div','bd');
+  if(!grouped){const h=el('div','hd');h.append(el('b','',m.name),el('span','',d.toLocaleDateString('pt-BR')+' '+hm));bd.append(h)}
+  bd.append(el('div','tx',m.text));row.append(bd);box.append(row);
+  last=m;if(stick||m.uid===me.uid)box.scrollTop=box.scrollHeight;
+}
+$('form').onsubmit=async ev=>{
+  ev.preventDefault();
+  const inp=$('msgIn'),text=inp.value.trim();if(!text||!cur.cid)return;
+  inp.value='';
+  await set(push(ref(db,'messages/'+cur.sid+'/'+cur.cid)),{uid:me.uid,name:me.displayName||me.email.split('@')[0],text:text.slice(0,2000),ts:Date.now()});
+};
+
+/* ---------- Membros ---------- */
+function drawMembers(){
+  const box=$('members');if(!me)return;box.innerHTML='';
+  const arr=Object.entries(members).map(([uid,m])=>({uid,name:m.name,on:!!pres[uid]}));
+  for(const [label,on] of [['Online',true],['Offline',false]]){
+    const g=arr.filter(x=>x.on===on).sort((a,b)=>a.name.localeCompare(b.name));
+    if(!g.length)continue;
+    box.append(el('h3','',label+' — '+g.length));
+    for(const x of g){
+      const r=el('div','mb'+(on?'':' off')),a=avatar(x.name,x.uid);a.append(el('span','dot'));
+      r.append(a,el('span','',x.name));box.append(r);
+    }
+  }
+}
+mode(false);
+</script>
+</body>
+</html>
