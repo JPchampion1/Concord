@@ -138,6 +138,22 @@ button{cursor:pointer;border:0}
 .urow .av{width:32px;height:32px;font-size:13px}
 .md .urow input{width:18px;height:18px;padding:0;accent-color:var(--brand)}
 .uempty{padding:16px;text-align:center;color:var(--mut)}
+/* ---------- PERFIL ---------- */
+#me .av,#me .nm,.mb,.lk{cursor:pointer}
+.hd b.lk:hover{text-decoration:underline}
+.md:has(.pbanner) .x{color:#0b1a02}
+.pbanner{height:100px;background:var(--brand)}
+.pbody{padding:0 16px 16px}
+.av.big{width:92px;height:92px;border:6px solid var(--bg2);margin-top:-46px;font-size:38px;cursor:default}
+.pname{margin-top:8px;font-size:20px;font-weight:700;overflow-wrap:anywhere}
+.pst{font-size:14px;color:var(--mut)}
+.pact{margin:16px 0}
+.pcard{padding:12px;border-radius:8px;background:var(--bg1)}
+.pcard h4{margin:0 0 4px;font-size:12px;font-weight:700;color:#b5bac1}
+.pcard div+h4{margin-top:16px}
+.pbio{font-size:14px;line-height:20px;white-space:pre-wrap;overflow-wrap:anywhere}
+.pbio.nil{color:var(--mut)}
+.md textarea{width:100%;min-height:96px;resize:vertical;padding:10px;border:0;border-radius:3px;background:var(--inp);font:inherit;color:inherit}
 @media(max-width:900px){#app{grid-template-columns:72px 200px 1fr}#members{display:none}}
 @media(max-width:560px){#app{grid-template-columns:60px 1fr}#side{display:none}.sv{width:42px;height:42px}}
 </style>
@@ -235,12 +251,13 @@ $('authForm').onsubmit=async ev=>{
       const name=$('aName').value.trim()||em.split('@')[0];
       const c=await createUserWithEmailAndPassword(auth,em,pw);
       await updateProfile(c.user,{displayName:name});
-      await set(ref(db,'users/'+c.user.uid),{name});
+      await update(ref(db,'users/'+c.user.uid),{name});
       $('meName').textContent=name;$('meAv').replaceWith(Object.assign(avatar(name,c.user.uid),{id:'meAv'}));
     }else await signInWithEmailAndPassword(auth,em,pw);
   }catch(x){fail(x)}
 };
 $('logout').onclick=()=>signOut(auth);
+$('me').onclick=e=>{if(!e.target.closest('#logout'))profileView(me.uid)};
 
 /* ---------- Estado ---------- */
 let inviteParam=new URLSearchParams(location.search).get('convite');
@@ -256,7 +273,7 @@ onAuthStateChanged(auth,u=>{
   $('meName').textContent=name;
   $('meAv').replaceWith(Object.assign(avatar(name,u.uid),{id:'meAv'}));
   $('meAv').insertAdjacentHTML('beforeend','<span class="dot"></span>');
-  update(ref(db,'users/'+u.uid),{name}).catch(()=>{});
+  update(ref(db,'users/'+u.uid),{name,createdAt:Date.parse(u.metadata.creationTime)||Date.now()}).catch(()=>{});
   // presença
   const pr=ref(db,'presence/'+u.uid);
   onValue(ref(db,'.info/connected'),s=>{if(s.val()){onDisconnect(pr).set(false);set(pr,true)}});
@@ -316,6 +333,59 @@ function createView(){
   };
   d.querySelector('#mBack').onclick=chooseView;d.querySelector('#mOk').onclick=go;enter(inp,go);
   showModal(d);
+}
+async function profileView(uid){
+  const isMe=uid===me.uid;let u={};
+  try{u=(await get(ref(db,'users/'+uid))).val()||{}}catch{}
+  const name=isMe?myName():(u.name||'Usuário');
+  const since=isMe&&me.metadata.creationTime?Date.parse(me.metadata.creationTime):u.createdAt;
+  const d=view(`<div class="pbanner"></div><div class="pbody"><div class="pav"></div><div class="pname"></div><div class="pst"></div><div class="pact"></div>
+    <div class="pcard"><h4>Sobre mim</h4><div class="pbio"></div><h4>Membro desde</h4><div class="psince"></div></div></div>`);
+  const av=avatar(name,uid);av.classList.add('big');d.querySelector('.pav').append(av);
+  d.querySelector('.pname').textContent=name;
+  d.querySelector('.pst').textContent=pres[uid]?'Online':'Offline';
+  const bio=d.querySelector('.pbio');
+  bio.textContent=u.bio||(isMe?'Você ainda não escreveu nada. Clique em Editar perfil.':'Nenhuma descrição.');
+  if(!u.bio)bio.classList.add('nil');
+  d.querySelector('.psince').textContent=since?new Date(since).toLocaleDateString('pt-BR',{day:'numeric',month:'long',year:'numeric'}):'—';
+  if(isMe){const b=el('button','b2 pri','Editar perfil');b.onclick=()=>editProfileView(u);d.querySelector('.pact').append(b)}
+  else d.querySelector('.pact').remove();
+  showModal(d);
+}
+function editProfileView(u){
+  const d=view(`<div class="pad"><h2>Editar perfil</h2><p>Mude como você aparece para os outros.</p>
+    <label class="lb" for="eName">Nome de exibição</label><input id="eName" maxlength="24" autocomplete="off">
+    <label class="lb" for="eBio" style="margin-top:16px">Sobre mim</label><textarea id="eBio" maxlength="190"></textarea><div class="err"></div></div>
+    <div class="foot2"><button class="b2 lnk" id="eBack">Cancelar</button><button class="b2 pri" id="eOk">Salvar</button></div>`);
+  d.querySelector('#eName').value=myName();d.querySelector('#eBio').value=u.bio||'';
+  d.querySelector('#eBack').onclick=()=>profileView(me.uid);
+  d.querySelector('#eOk').onclick=async e=>{
+    const name=d.querySelector('#eName').value.trim(),bio=d.querySelector('#eBio').value.trim();
+    if(!name)return say(d,'O nome não pode ficar vazio.');
+    e.target.disabled=true;
+    try{await saveProfile(name,bio);profileView(me.uid)}
+    catch{e.target.disabled=false;say(d,'Não foi possível salvar. Tente de novo.')}
+  };
+  showModal(d);
+}
+async function saveProfile(name,bio){
+  const changed=name!==myName();
+  if(changed)await updateProfile(me,{displayName:name});
+  await update(ref(db,'users/'+me.uid),{name,bio});
+  $('meName').textContent=name;
+  $('meAv').replaceWith(Object.assign(avatar(name,me.uid),{id:'meAv'}));
+  $('meAv').insertAdjacentHTML('beforeend','<span class="dot"></span>');
+  if(!changed)return;
+  try{ // atualiza o nome nas listas de membros e conversas
+    const [sv,dm]=await Promise.all([get(ref(db,'userServers/'+me.uid)),get(ref(db,'userDms/'+me.uid))]);
+    const up={};
+    Object.keys(sv.val()||{}).forEach(id=>up['servers/'+id+'/members/'+me.uid+'/name']=name);
+    Object.entries(dm.val()||{}).forEach(([id,x])=>{
+      up['dms/'+id+'/members/'+me.uid+'/name']=name;
+      if(!x.group&&x.peer)up['userDms/'+x.peer+'/'+id+'/name']=name;
+    });
+    await update(ref(db),up);
+  }catch{}
 }
 function newChatView(){
   const d=view(`<div class="pad"><h2>Nova conversa</h2><p>Converse com uma pessoa ou crie um grupo.</p>
@@ -546,9 +616,10 @@ function addMsg(m){
   const d=new Date(m.ts||Date.now()),hm=d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
   const grouped=last&&last.uid===m.uid&&m.ts-last.ts<300000;
   const row=el('div','m'+(grouped?'':' first'));
-  if(grouped){row.append(el('div','sp',hm))}else row.append(avatar(m.name,m.uid));
+  const open=()=>profileView(m.uid);
+  if(grouped){row.append(el('div','sp',hm))}else{const av=avatar(m.name,m.uid);av.classList.add('lk');av.onclick=open;row.append(av)}
   const bd=el('div','bd');
-  if(!grouped){const h=el('div','hd');h.append(el('b','',m.name),el('span','',d.toLocaleDateString('pt-BR')+' '+hm));bd.append(h)}
+  if(!grouped){const h=el('div','hd'),nb=el('b','lk',m.name);nb.onclick=open;h.append(nb,el('span','',d.toLocaleDateString('pt-BR')+' '+hm));bd.append(h)}
   const [tx,inv]=richText(m.text);bd.append(tx);if(inv)bd.append(inviteCard(inv));
   row.append(bd);box.append(row);
   last=m;if(stick||m.uid===me.uid)box.scrollTop=box.scrollHeight;
@@ -570,7 +641,7 @@ function drawMembers(){
     box.append(el('h3','',label+' — '+g.length));
     for(const x of g){
       const r=el('div','mb'+(on?'':' off')),a=avatar(x.name,x.uid);a.append(el('span','dot'));
-      r.append(a,el('span','',x.name));box.append(r);
+      r.append(a,el('span','',x.name));r.onclick=()=>profileView(x.uid);box.append(r);
     }
   }
 }
