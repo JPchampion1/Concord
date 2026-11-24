@@ -193,6 +193,15 @@ button{cursor:pointer;border:0}
 .at b{color:var(--mut)}.md .at input{height:100%;padding:0;background:none}
 .ok2{color:var(--brand)}
 body[data-req]:not([data-req="0"]) #homeBtn::after{content:"";position:absolute;right:-2px;top:-2px;width:12px;height:12px;border-radius:50%;background:var(--err);border:3px solid var(--bg1);box-sizing:content-box}
+/* ---------- ÍCONES ---------- */
+.i{width:1.2em;height:1.2em;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;display:block;flex:none}
+#navBtn,#memBtn,.md .x,.sx,.rqb,#attach,.sv.add,.chead button{display:grid;place-items:center}
+#navBtn .i,#memBtn .i{width:22px;height:22px}
+#setBtn .i{width:18px;height:18px}
+.md .x .i{width:20px;height:20px}.sx .i{width:16px;height:16px}.rqb .i{width:16px;height:16px}
+#attach .i{width:22px;height:22px}.sv.add .i{width:22px;height:22px}.chead button .i{width:16px;height:16px}
+.opt .ic .i{width:20px;height:20px}.opt .arr{display:flex}.opt .arr .i{width:20px;height:20px}
+#chtitle i{display:inline-flex}#chtitle i .i{width:20px;height:20px}
 /* ---------- STATUS ---------- */
 #meSt{cursor:pointer}#meSt:hover{text-decoration:underline;color:var(--txt)}
 .sdot{position:relative;display:inline-block;width:16px;height:16px;border-radius:50%;flex:none}
@@ -312,14 +321,14 @@ body[data-theme="black"]{--bg1:#000;--bg2:#0b0b0c;--bg3:#111113;--hov:#1b1b1e;--
     <div id="me">
       <div class="av" id="meAv"><span class="dot"></span></div>
       <div class="nm"><span id="meName"></span><small id="meSt" title="Mudar status">Online</small></div>
-      <button id="setBtn" title="Configurações" aria-label="Configurações">⚙</button>
+      <button id="setBtn" title="Configurações" aria-label="Configurações" data-ic="settings"></button>
       <button id="logout" title="Sair">Sair</button>
     </div>
   </aside>
   <main id="main">
-    <div id="top"><button id="navBtn" aria-label="Abrir menu">☰</button><div id="chtitle"></div><button id="memBtn" aria-label="Membros">👥</button></div>
+    <div id="top"><button id="navBtn" aria-label="Abrir menu" data-ic="menu"></button><div id="chtitle"></div><button id="memBtn" aria-label="Membros" data-ic="users"></button></div>
     <div id="msgs"></div>
-    <form id="form"><button type="button" id="attach" title="Enviar imagem">+</button><input id="msgIn" autocomplete="off" disabled placeholder="Selecione um canal"></form>
+    <form id="form"><button type="button" id="attach" title="Enviar imagem" data-ic="plus"></button><input id="msgIn" autocomplete="off" disabled placeholder="Selecione um canal"></form>
   </main>
   <aside id="members"></aside>
 </div>
@@ -345,6 +354,19 @@ const app=initializeApp({
 const auth=getAuth(app), db=getDatabase(app);
 const $=id=>document.getElementById(id);
 const el=(t,c,x)=>{const e=document.createElement(t);if(c)e.className=c;if(x!=null)e.textContent=x;return e};
+const ICON={
+  menu:'<path d="M4 6h16M4 12h16M4 18h16"/>',
+  users:'<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>',
+  settings:'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>',
+  x:'<path d="M18 6 6 18M6 6l12 12"/>',
+  check:'<path d="M20 6 9 17l-5-5"/>',
+  plus:'<path d="M12 5v14M5 12h14"/>',
+  chev:'<path d="m9 18 6-6-6-6"/>',
+  at:'<circle cx="12" cy="12" r="4"/><path d="M16 8v5a3 3 0 0 0 6 0v-1a10 10 0 1 0-4 8"/>'
+};
+const ic=n=>`<svg class="i" viewBox="0 0 24 24" aria-hidden="true">${ICON[n]}</svg>`;
+const ib=(c,n)=>Object.assign(document.createElement('button'),{className:c,innerHTML:ic(n)});
+document.querySelectorAll('[data-ic]').forEach(b=>b.innerHTML=ic(b.dataset.ic));
 const colorOf=s=>{let h=0;for(const c of s)h=(h*31+c.charCodeAt(0))%360;return `hsl(${h} 60% 62%)`};
 let photos={};
 const applyPhoto=a=>{const p=photos[a.dataset.uid];a.style.backgroundImage=p?`url("${p}")`:'';a.style.backgroundSize='cover';a.style.backgroundPosition='center';a.style.color=p?'transparent':''};
@@ -493,7 +515,7 @@ function drawServers(list){
     b.title=s.name;b.onclick=()=>pickServer(sid,s.name);nav.append(b);
   }
   nav.append(el('div','sep'));
-  const add=el('button','sv add','+');add.title='Adicionar um servidor';add.onclick=chooseView;
+  const add=ib('sv add','plus');add.title='Adicionar um servidor';add.onclick=chooseView;
   nav.append(add);
 }
 /* ---------- Janelas (modais) ---------- */
@@ -501,7 +523,7 @@ const myName=()=>me.displayName||me.email.split('@')[0];
 const ov=$('ov');
 function showModal(node){
   ov.innerHTML='';const m=el('div','md');
-  const x=el('button','x','×');x.setAttribute('aria-label','Fechar');x.onclick=closeModal;
+  const x=ib('x','x');x.setAttribute('aria-label','Fechar');x.onclick=closeModal;
   m.append(x,node);ov.append(m);ov.classList.remove('hidden');
   const i=m.querySelector('input');if(i){i.focus();i.select()}
 }
@@ -534,7 +556,7 @@ const enter=(inp,fn)=>inp.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();f
 
 function chooseView(){
   const d=view(`<div class="pad"><h2>Criar seu servidor</h2><p>Seu servidor é onde você e seus amigos se reúnem. Crie o seu e comece a interagir.</p>
-    <button class="opt" id="oCreate"><span class="ic">+</span>Criar o meu<span class="arr">›</span></button></div>`);
+    <button class="opt" id="oCreate"><span class="ic">${ic('plus')}</span>Criar o meu<span class="arr">${ic('chev')}</span></button></div>`);
   d.querySelector('#oCreate').onclick=createView;
   showModal(d);
 }
@@ -752,7 +774,7 @@ function drawDms(list){
   const rs=Object.entries(reqList);
   if(rs.length){head('Pedidos de amizade — '+rs.length);
     for(const [uid,r] of rs){
-      const row=el('div','rq'),ok=el('button','rqb ok','✓'),no=el('button','rqb','✕');
+      const row=el('div','rq'),ok=ib('rqb ok','check'),no=ib('rqb','x');
       ok.title='Aceitar';no.title='Recusar';
       ok.onclick=()=>acceptRequest(uid).catch(()=>{});no.onclick=()=>remove(ref(db,'friendRequests/'+me.uid+'/'+uid)).catch(()=>{});
       row.append(avatar(r.name,uid),who(r.name,r.username),ok,no);box.append(row);
@@ -764,7 +786,7 @@ function drawDms(list){
     const b=el('button','ch dm');b.append(avatar(u.name,u.uid),who(u.name,friendList[u.uid].username));
     b.onclick=()=>openDm(u).catch(()=>{});box.append(b);
   }
-  const add=el('button','','+');add.title='Criar grupo';add.onclick=groupView;
+  const add=ib('','plus');add.title='Criar grupo';add.onclick=groupView;
   head('Mensagens diretas',add);
   const ids=Object.keys(dmList).sort((a,b)=>(dmList[b].ts||0)-(dmList[a].ts||0));
   if(!ids.length)box.append(el('div','empty','Nenhuma conversa ainda. Clique em um amigo.'));
@@ -778,7 +800,7 @@ function pickDm(id,d){
   document.querySelectorAll('.ch.dm').forEach(b=>b.classList.toggle('on',b.dataset.id===id));
   un.mem=onValue(ref(db,'dms/'+id+'/members'),s=>{members=s.val()||{};drawMembers()});
   last=null;
-  const t=$('chtitle');t.innerHTML='';t.append(el('i','',d.group?'👥':'@'),document.createTextNode(d.name));
+  const t=$('chtitle');t.innerHTML='';t.append(Object.assign(el('i'),{innerHTML:ic(d.group?'users':'at')}),document.createTextNode(d.name));
   const box=$('msgs');box.innerHTML='';
   const e=el('div','empty');e.id='emptyMsg';
   e.append(el('h2','',d.group?'Bem-vindo ao grupo '+d.name:'Conversa com '+d.name),el('div','','Este é o começo da conversa. Mande a primeira mensagem!'));box.append(e);
@@ -823,7 +845,7 @@ function pickServer(sid,name){
 function drawChannels(chs){
   const box=$('chans');box.innerHTML='';
   const h=el('div','chead');h.append(el('span','','Canais de texto'));
-  const add=el('button','','+');add.title='Criar canal';add.onclick=channelView;h.append(add);box.append(h);
+  const add=ib('','plus');add.title='Criar canal';add.onclick=channelView;h.append(add);box.append(h);
   for(const [cid,c] of Object.entries(chs)){
     const b=el('button','ch'+(cid===cur.cid?' on':''));b.append(el('i','','#'),document.createTextNode(c.name));
     b.onclick=()=>pickChannel(cid,c.name);box.append(b);
@@ -896,7 +918,7 @@ function addMsg(m){
   const [tx,inv]=richText(m.text||'');if(m.text)bd.append(tx);if(inv)bd.append(inviteCard(inv));if(m.img)bd.append(picBox(m));
   row.append(bd);box.append(row);
   last=m;if(stick||m.uid===me.uid)box.scrollTop=box.scrollHeight;
-  if(m.uid!==me.uid&&document.hidden&&P.notif&&myStatus!=='dnd'&&Date.now()-(m.ts||0)<8000&&'Notification' in window&&Notification.permission==='granted'){try{new Notification(m.name||'Concord',{body:m.text||'📷 Imagem'})}catch{}}
+  if(m.uid!==me.uid&&document.hidden&&P.notif&&myStatus!=='dnd'&&Date.now()-(m.ts||0)<8000&&'Notification' in window&&Notification.permission==='granted'){try{new Notification(m.name||'Concord',{body:m.text||'Imagem'})}catch{}}
 }
 $('form').onsubmit=async ev=>{
   ev.preventDefault();
@@ -1048,7 +1070,7 @@ const TABS=[['account','Minha conta'],['privacy','Privacidade e permissões'],['
 function openSettings(tab){
   if(typeof tab==='string')sTab=tab;
   S.classList.remove('hidden');S.innerHTML='';
-  const nav=el('nav'),sec=el('section'),c=el('div','sc'),x=el('button','sx','✕');x.setAttribute('aria-label','Fechar');x.onclick=closeSettings;
+  const nav=el('nav'),sec=el('section'),c=el('div','sc'),x=ib('sx','x');x.setAttribute('aria-label','Fechar');x.onclick=closeSettings;
   nav.append(el('h3','','Configurações'));
   for(const [k,n] of TABS)nav.append(btn(n,()=>openSettings(k),'sn'+(k===sTab?' on':'')));
   nav.append(btn('Sair',()=>{closeSettings();signOut(auth)},'sn red'));
