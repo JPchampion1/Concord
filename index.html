@@ -77,7 +77,7 @@ button{cursor:pointer;border:0}
 .m .hd b{font-weight:600;margin-right:8px}
 .m .hd span{font-size:12px;color:var(--mut)}
 .m .tx{line-height:22px;white-space:pre-wrap;overflow-wrap:anywhere;color:#dbdee1}
-#form{padding:0 16px 24px}
+#form{display:flex;gap:8px;padding:0 16px 24px}
 #form input{width:100%;height:44px;padding:0 16px;border:0;border-radius:8px;background:#383a40}
 #form input::placeholder{color:var(--mut)}
 #members{background:var(--bg2);overflow-y:auto;padding:16px 8px}
@@ -154,6 +154,23 @@ button{cursor:pointer;border:0}
 .pbio{font-size:14px;line-height:20px;white-space:pre-wrap;overflow-wrap:anywhere}
 .pbio.nil{color:var(--mut)}
 .md textarea{width:100%;min-height:96px;resize:vertical;padding:10px;border:0;border-radius:3px;background:var(--inp);font:inherit;color:inherit}
+/* ---------- EDIÇÃO NO PERFIL E IMAGENS ---------- */
+.ed{cursor:text;border-radius:4px;transition:background-color .17s}
+.ed:hover{background:var(--hov)}
+.pname.ed{margin-left:-4px;padding:2px 4px}
+.pbio.ed{margin:-4px;padding:4px}
+.md .ei{width:100%;height:auto;padding:6px 8px;border:0;border-radius:3px;background:var(--inp);color:inherit;font:inherit;outline:2px solid var(--brand)}
+.md textarea.ei{min-height:84px;resize:vertical}
+.av.chg{cursor:pointer}
+.av.chg:hover::after{content:"Trocar";position:absolute;inset:0;display:grid;place-items:center;border-radius:50%;background:rgba(0,0,0,.55);color:#fff;font-size:12px;font-weight:600}
+.phint{margin-top:12px;min-height:16px;font-size:12px;color:var(--mut)}
+.phint .link{margin-left:8px;font-size:12px}
+#attach{width:44px;height:44px;flex:none;border-radius:8px;background:#383a40;color:var(--mut);font-size:24px}
+#attach:hover:not(:disabled){color:var(--txt)}
+#attach:disabled{opacity:.5;cursor:default}
+.pic{margin-top:4px;max-width:100%;border-radius:8px;overflow:hidden;background:var(--bg2);cursor:zoom-in}
+.pic img{display:block;width:100%;height:100%;object-fit:cover}
+.lbimg{max-width:100%;max-height:100%;border-radius:8px;cursor:zoom-out}
 @media(max-width:900px){#app{grid-template-columns:72px 200px 1fr}#members{display:none}}
 @media(max-width:560px){#app{grid-template-columns:60px 1fr}#side{display:none}.sv{width:42px;height:42px}}
 </style>
@@ -196,7 +213,7 @@ button{cursor:pointer;border:0}
   <main id="main">
     <div id="chtitle"></div>
     <div id="msgs"></div>
-    <form id="form"><input id="msgIn" autocomplete="off" disabled placeholder="Selecione um canal"></form>
+    <form id="form"><button type="button" id="attach" title="Enviar imagem">+</button><input id="msgIn" autocomplete="off" disabled placeholder="Selecione um canal"></form>
   </main>
   <aside id="members"></aside>
 </div>
@@ -206,7 +223,7 @@ button{cursor:pointer;border:0}
 <script type="module">
 import {initializeApp} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
 import {getAuth,onAuthStateChanged,signInWithEmailAndPassword,createUserWithEmailAndPassword,updateProfile,signOut,sendPasswordResetEmail} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
-import {getDatabase,ref,push,set,get,update,onValue,onChildAdded,query,limitToLast,onDisconnect} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js";
+import {getDatabase,ref,push,set,get,update,onValue,onChildAdded,query,limitToLast,onDisconnect,remove} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js";
 
 const app=initializeApp({
   apiKey:"AIzaSyBJsPaZOArWDvpzEz5sPCxBaJe_Yf7eoTg",
@@ -221,7 +238,26 @@ const auth=getAuth(app), db=getDatabase(app);
 const $=id=>document.getElementById(id);
 const el=(t,c,x)=>{const e=document.createElement(t);if(c)e.className=c;if(x!=null)e.textContent=x;return e};
 const colorOf=s=>{let h=0;for(const c of s)h=(h*31+c.charCodeAt(0))%360;return `hsl(${h} 60% 62%)`};
-const avatar=(name,uid)=>{const a=el('div','av',(name||'?')[0].toUpperCase());a.style.background=colorOf(uid||name);return a};
+let photos={};
+const applyPhoto=a=>{const p=photos[a.dataset.uid];a.style.backgroundImage=p?`url("${p}")`:'';a.style.backgroundSize='cover';a.style.backgroundPosition='center';a.style.color=p?'transparent':''};
+const avatar=(name,uid)=>{const a=el('div','av',(name||'?')[0].toUpperCase());a.dataset.uid=uid||name;a.style.background=colorOf(uid||name);applyPhoto(a);return a};
+// reduz a imagem no navegador e devolve base64 (data URL JPEG)
+function shrink(file,max,q,square){
+  return new Promise((ok,no)=>{
+    const img=new Image(),url=URL.createObjectURL(file);
+    img.onload=()=>{
+      URL.revokeObjectURL(url);
+      let w=img.width,h=img.height,sx=0,sy=0,sw=w,sh=h;
+      if(square){const m=Math.min(w,h);sx=(w-m)/2;sy=(h-m)/2;sw=sh=m;w=h=Math.min(max,m)}
+      else{const k=Math.min(1,max/Math.max(w,h));w=Math.round(w*k);h=Math.round(h*k)}
+      const c=document.createElement('canvas');c.width=w;c.height=h;
+      const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,w,h);x.drawImage(img,sx,sy,sw,sh,0,0,w,h);
+      ok({url:c.toDataURL('image/jpeg',q),w,h});
+    };
+    img.onerror=()=>{URL.revokeObjectURL(url);no(new Error('img'))};
+    img.src=url;
+  });
+}
 
 /* ---------- Login / registro ---------- */
 let reg=false;
@@ -278,6 +314,7 @@ onAuthStateChanged(auth,u=>{
   const pr=ref(db,'presence/'+u.uid);
   onValue(ref(db,'.info/connected'),s=>{if(s.val()){onDisconnect(pr).set(false);set(pr,true)}});
   onValue(ref(db,'presence'),s=>{pres=s.val()||{};drawMembers()});
+  onValue(ref(db,'avatars'),s=>{photos=s.val()||{};document.querySelectorAll('.av[data-uid]').forEach(applyPhoto)});
   // servidores
   stop('srv');
   un.srv=onValue(ref(db,'userServers/'+u.uid),s=>{
@@ -334,38 +371,61 @@ function createView(){
   d.querySelector('#mBack').onclick=chooseView;d.querySelector('#mOk').onclick=go;enter(inp,go);
   showModal(d);
 }
+// transforma um texto em campo editável ao clicar; salva ao sair do campo ou com Enter
+function editable(box,get,save,show,multi,max){
+  box.classList.add('ed');box.title='Clique para editar';
+  box.onclick=()=>{
+    if(box.querySelector('.ei'))return;
+    const f=document.createElement(multi?'textarea':'input');f.className='ei';f.maxLength=max;f.value=get();
+    box.textContent='';box.append(f);f.focus();f.select();
+    let done=false;
+    const end=async ok=>{
+      if(done)return;done=true;
+      const v=f.value.trim();
+      if(ok&&v!==get()&&(multi||v))await save(v);
+      show();
+    };
+    f.onblur=()=>end(true);
+    f.onkeydown=e=>{
+      if(e.key==='Escape'){e.preventDefault();e.stopPropagation();end(false)}
+      else if(e.key==='Enter'&&(!multi||e.ctrlKey)){e.preventDefault();end(true)}
+    };
+  };
+}
+function pickPhoto(hint){
+  const fi=document.createElement('input');fi.type='file';fi.accept='image/*';
+  fi.onchange=async()=>{
+    const f=fi.files[0];if(!f)return;
+    try{await set(ref(db,'avatars/'+me.uid),(await shrink(f,128,.82,true)).url)}
+    catch{hint.firstChild.textContent='Não foi possível enviar a imagem.'}
+  };
+  fi.click();
+}
 async function profileView(uid){
   const isMe=uid===me.uid;let u={};
   try{u=(await get(ref(db,'users/'+uid))).val()||{}}catch{}
-  const name=isMe?myName():(u.name||'Usuário');
+  let name=isMe?myName():(u.name||'Usuário'),bio=u.bio||'';
   const since=isMe&&me.metadata.creationTime?Date.parse(me.metadata.creationTime):u.createdAt;
-  const d=view(`<div class="pbanner"></div><div class="pbody"><div class="pav"></div><div class="pname"></div><div class="pst"></div><div class="pact"></div>
-    <div class="pcard"><h4>Sobre mim</h4><div class="pbio"></div><h4>Membro desde</h4><div class="psince"></div></div></div>`);
+  const d=view(`<div class="pbanner"></div><div class="pbody"><div class="pav"></div><div class="pname"></div><div class="pst"></div>
+    <div class="pcard"><h4>Sobre mim</h4><div class="pbio"></div><h4>Membro desde</h4><div class="psince"></div></div><div class="phint"><span></span></div></div>`);
   const av=avatar(name,uid);av.classList.add('big');d.querySelector('.pav').append(av);
-  d.querySelector('.pname').textContent=name;
+  const nm=d.querySelector('.pname'),bo=d.querySelector('.pbio'),hint=d.querySelector('.phint'),msg=hint.firstChild;
+  const showName=()=>nm.textContent=name;
+  const showBio=()=>{bo.textContent=bio||(isMe?'Clique para adicionar uma descrição.':'Nenhuma descrição.');bo.classList.toggle('nil',!bio)};
+  showName();showBio();
   d.querySelector('.pst').textContent=pres[uid]?'Online':'Offline';
-  const bio=d.querySelector('.pbio');
-  bio.textContent=u.bio||(isMe?'Você ainda não escreveu nada. Clique em Editar perfil.':'Nenhuma descrição.');
-  if(!u.bio)bio.classList.add('nil');
   d.querySelector('.psince').textContent=since?new Date(since).toLocaleDateString('pt-BR',{day:'numeric',month:'long',year:'numeric'}):'—';
-  if(isMe){const b=el('button','b2 pri','Editar perfil');b.onclick=()=>editProfileView(u);d.querySelector('.pact').append(b)}
-  else d.querySelector('.pact').remove();
-  showModal(d);
-}
-function editProfileView(u){
-  const d=view(`<div class="pad"><h2>Editar perfil</h2><p>Mude como você aparece para os outros.</p>
-    <label class="lb" for="eName">Nome de exibição</label><input id="eName" maxlength="24" autocomplete="off">
-    <label class="lb" for="eBio" style="margin-top:16px">Sobre mim</label><textarea id="eBio" maxlength="190"></textarea><div class="err"></div></div>
-    <div class="foot2"><button class="b2 lnk" id="eBack">Cancelar</button><button class="b2 pri" id="eOk">Salvar</button></div>`);
-  d.querySelector('#eName').value=myName();d.querySelector('#eBio').value=u.bio||'';
-  d.querySelector('#eBack').onclick=()=>profileView(me.uid);
-  d.querySelector('#eOk').onclick=async e=>{
-    const name=d.querySelector('#eName').value.trim(),bio=d.querySelector('#eBio').value.trim();
-    if(!name)return say(d,'O nome não pode ficar vazio.');
-    e.target.disabled=true;
-    try{await saveProfile(name,bio);profileView(me.uid)}
-    catch{e.target.disabled=false;say(d,'Não foi possível salvar. Tente de novo.')}
-  };
+  if(isMe){
+    const fail='Não foi possível salvar. Tente de novo.';
+    editable(nm,()=>name,async v=>{try{await saveProfile(v,bio);name=v;msg.textContent=''}catch{msg.textContent=fail}},showName,false,24);
+    editable(bo,()=>bio,async v=>{try{await saveProfile(name,v);bio=v;msg.textContent=''}catch{msg.textContent=fail}},showBio,true,190);
+    av.classList.add('chg');av.title='Trocar foto';av.onclick=()=>pickPhoto(hint);
+    msg.textContent='Clique na foto, no nome ou na descrição para editar.';
+    if(photos[uid]){
+      const r=el('button','link','Remover foto');
+      r.onclick=()=>{remove(ref(db,'avatars/'+uid));r.remove()};hint.append(r);
+    }
+  }
   showModal(d);
 }
 async function saveProfile(name,bio){
@@ -620,7 +680,7 @@ function addMsg(m){
   if(grouped){row.append(el('div','sp',hm))}else{const av=avatar(m.name,m.uid);av.classList.add('lk');av.onclick=open;row.append(av)}
   const bd=el('div','bd');
   if(!grouped){const h=el('div','hd'),nb=el('b','lk',m.name);nb.onclick=open;h.append(nb,el('span','',d.toLocaleDateString('pt-BR')+' '+hm));bd.append(h)}
-  const [tx,inv]=richText(m.text);bd.append(tx);if(inv)bd.append(inviteCard(inv));
+  const [tx,inv]=richText(m.text||'');if(m.text)bd.append(tx);if(inv)bd.append(inviteCard(inv));if(m.img)bd.append(picBox(m));
   row.append(bd);box.append(row);
   last=m;if(stick||m.uid===me.uid)box.scrollTop=box.scrollHeight;
 }
@@ -628,7 +688,40 @@ $('form').onsubmit=async ev=>{
   ev.preventDefault();
   const inp=$('msgIn'),text=inp.value.trim();if(!text||!(cur.cid||cur.dm))return;
   inp.value='';
-  await set(push(ref(db,cur.dm?'dmMessages/'+cur.dm:'messages/'+cur.sid+'/'+cur.cid)),{uid:me.uid,name:me.displayName||me.email.split('@')[0],text:text.slice(0,2000),ts:Date.now()});
+  await post({text:text.slice(0,2000)});
+};
+
+/* ---------- Imagens (base64 no Realtime Database) ---------- */
+const msgPath=()=>cur.dm?'dmMessages/'+cur.dm:'messages/'+cur.sid+'/'+cur.cid;
+const post=o=>set(push(ref(db,msgPath())),{uid:me.uid,name:myName(),text:'',ts:Date.now(),...o});
+async function sendImage(file){
+  if(!file||!file.type.startsWith('image/')||!(cur.cid||cur.dm))return;
+  const btn=$('attach');btn.disabled=true;
+  try{
+    let r=await shrink(file,1000,.78,false);
+    if(r.url.length>380000)r=await shrink(file,700,.65,false);
+    const id=push(ref(db,'images')).key;
+    await set(ref(db,'images/'+id),r.url);
+    await post({img:id,iw:r.w,ih:r.h});
+  }catch{}
+  btn.disabled=false;
+}
+function picBox(m){
+  const w=m.iw||300,h=m.ih||200,b=el('div','pic'),i=new Image();
+  b.style.aspectRatio=w+'/'+h;b.style.width=Math.min(w,400)+'px';i.alt='imagem';b.append(i);
+  get(ref(db,'images/'+m.img)).then(s=>{if(s.exists()){i.src=s.val();b.onclick=()=>lightbox(s.val())}}).catch(()=>{});
+  return b;
+}
+function lightbox(src){
+  ov.innerHTML='';const i=new Image();i.src=src;i.className='lbimg';i.onclick=closeModal;
+  ov.append(i);ov.classList.remove('hidden');
+}
+const pickImg=document.createElement('input');pickImg.type='file';pickImg.accept='image/*';
+pickImg.onchange=()=>{sendImage(pickImg.files[0]);pickImg.value=''};
+$('attach').onclick=()=>{if(cur.cid||cur.dm)pickImg.click()};
+$('msgIn').onpaste=e=>{
+  const f=[...(e.clipboardData?.files||[])].find(x=>x.type.startsWith('image/'));
+  if(f){e.preventDefault();sendImage(f)}
 };
 
 /* ---------- Membros ---------- */
