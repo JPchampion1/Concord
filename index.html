@@ -228,6 +228,8 @@ body[data-req]:not([data-req="0"]) #homeBtn::after{content:"";position:absolute;
 .at2{font-size:12px;color:var(--mut);min-width:32px;text-align:right}
 .toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);z-index:20;max-width:90%;padding:10px 16px;border-radius:8px;background:#111;color:#fff;font-size:14px;box-shadow:0 4px 16px rgba(0,0,0,.5)}
 @media(max-width:700px){#pick{right:8px;left:8px;width:auto;bottom:calc(64px + env(safe-area-inset-bottom,0px))}.fb{width:36px}#form{gap:4px}}
+/* só emojis: ficam grandes */
+.tx.jumbo{font-size:2.2em;line-height:1.25}
 img.emoji{display:inline-block;width:1.25em;height:1.25em;margin:0 .05em;vertical-align:-.3em}
 .em img.emoji{width:24px;height:24px;margin:0;vertical-align:middle}
 /* ---------- ÍCONES ---------- */
@@ -974,7 +976,7 @@ function addMsg(m){
   if(grouped){row.append(el('div','sp',hm))}else{const av=avatar(m.name,m.uid);av.classList.add('lk');av.onclick=open;row.append(av)}
   const bd=el('div','bd');
   if(!grouped){const h=el('div','hd'),nb=el('b','lk',m.name);nb.onclick=open;h.append(nb,el('span','',d.toLocaleDateString('pt-BR')+' '+hm));bd.append(h)}
-  const [tx,inv]=richText(m.text||'');if(m.text){bd.append(tx);tw(tx)}if(inv)bd.append(inviteCard(inv));if(m.img)bd.append(picBox(m));if(m.gif)bd.append(gifBox(m));if(m.aud)bd.append(audBox(m));
+  const [tx,inv]=richText(m.text||'');if(m.text){bd.append(tx);tw(tx);if(onlyEmoji(m.text))tx.classList.add('jumbo')}if(inv)bd.append(inviteCard(inv));if(m.img)bd.append(picBox(m));if(m.gif)bd.append(gifBox(m));if(m.aud)bd.append(audBox(m));
   row.append(bd);box.append(row);
   last=m;if(stick||m.uid===me.uid)box.scrollTop=box.scrollHeight;
   if(m.uid!==me.uid&&document.hidden&&P.notif&&myStatus!=='dnd'&&Date.now()-(m.ts||0)<8000&&'Notification' in window&&Notification.permission==='granted'){try{new Notification(m.name||'Concord',{body:m.text||(m.aud?'Áudio':m.gif?'GIF':'Imagem')})}catch{}}
@@ -1143,6 +1145,16 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!S.classList.contai
 const KLIPY='qrlPfwRE31MVSnMANBZlYpoJIacmXpYr3jdcUlVYhSx4K6C8vgbquyhkiAtV0V6F';
 // Twemoji: troca emoji por imagem (se alguma não carregar, volta para o emoji do sistema)
 const tw=n=>{try{window.twemoji&&twemoji.parse(n,{folder:'svg',ext:'.svg',attributes:()=>({loading:'lazy',onerror:"this.replaceWith(document.createTextNode(this.alt))"})})}catch{}};
+// mensagem só com emojis (até 10) -> emojis maiores
+const onlyEmoji=t=>{
+  const s=t.replace(/\s+/g,'');if(!s||!window.Intl||!Intl.Segmenter)return false;
+  let n=0;
+  for(const {segment} of new Intl.Segmenter(undefined,{granularity:'grapheme'}).segment(s)){
+    if(!/^(\p{Emoji_Presentation}|\p{Extended_Pictographic}\uFE0F|\p{Regional_Indicator}|[0-9#*]\uFE0F?\u20E3)/u.test(segment))return false;
+    if(++n>10)return false;
+  }
+  return n>0;
+};
 const norm=t=>t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
 const canSend=()=>!!(cur.cid||cur.dm);
 function toast(t){const e=el('div','toast',t);document.body.append(e);setTimeout(()=>e.remove(),3500)}
