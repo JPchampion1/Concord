@@ -953,12 +953,14 @@ function drawDms(list){
   head('Amigos — '+fs.length);
   if(!fs.length)box.append(el('div','empty','Nenhum amigo ainda. Use "Adicionar amigo".'));
   for(const u of fs){
-    const b=el('button','ch dm');b.append(avatar(u.name,u.uid),who(u.name,friendList[u.uid].username));
+    const did=[me.uid,u.uid].sort().join('_'),b=el('button','ch dm'+(did===cur.dm?' on':''));b.dataset.id=did;
+    b.append(avatar(u.name,u.uid),who(u.name,friendList[u.uid].username));
     b.onclick=()=>openDm(u).catch(()=>{});box.append(b);
   }
   const add=ib('','plus');add.title='Criar grupo';add.onclick=groupView;
   head('Mensagens diretas',add);
-  const ids=Object.keys(dmList).sort((a,b)=>(dmList[b].ts||0)-(dmList[a].ts||0));
+  const ids=Object.keys(dmList).filter(id=>{const d=dmList[id];return d.group||!d.peer||!friendList[d.peer]}).sort((a,b)=>(dmList[b].ts||0)-(dmList[a].ts||0)); // amigo já aparece em "Amigos"
+
   if(!ids.length)box.append(el('div','empty','Nenhuma conversa ainda. Clique em um amigo.'));
   for(const id of ids){
     const d=dmList[id],b=el('button','ch dm'+(id===cur.dm?' on':''));b.dataset.id=id;
