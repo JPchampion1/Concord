@@ -17,7 +17,7 @@
 *{box-sizing:border-box}
 html,body{height:100%;margin:0}
 body{font-family:"gg sans","Noto Sans","Helvetica Neue",Helvetica,Arial,sans-serif;background:var(--bg3);color:var(--txt);overflow:hidden;font-size:16px}
-button,input{font:inherit;color:inherit}
+button,input,textarea,select{font:inherit;color:inherit}
 button{cursor:pointer;border:0}
 :focus-visible{outline:2px solid var(--brand);outline-offset:2px}
 .hidden{display:none!important}
@@ -82,7 +82,7 @@ button{cursor:pointer;border:0}
 .m .tx{line-height:22px;white-space:pre-wrap;overflow-wrap:anywhere;color:#dbdee1}
 #form{display:flex;align-items:flex-end;gap:8px;padding:0 16px 24px}
 #form input,#form textarea{width:100%;height:44px;padding:0 16px;border:0;border-radius:8px;background:#383a40}
-#form textarea{min-height:44px;max-height:160px;padding:12px 16px;resize:none;line-height:20px;font:inherit;overflow-y:auto}
+#form textarea{color:var(--txt);min-height:44px;max-height:160px;padding:12px 16px;resize:none;line-height:20px;font:inherit;overflow-y:auto}
 #form input::placeholder,#form textarea::placeholder{color:var(--mut)}
 #sendBtn{display:none;background:var(--brand);color:#0b1a02}
 @media(pointer:coarse){#sendBtn{display:grid}}
@@ -901,7 +901,7 @@ function pickDm(id,d){
   const box=$('msgs');box.innerHTML='';
   const e=el('div','empty');e.id='emptyMsg';
   e.append(el('h2','',d.group?'Bem-vindo ao grupo '+d.name:'Conversa com '+d.name),el('div','','Este é o começo da conversa. Mande a primeira mensagem!'));box.append(e);
-  const inp=$('msgIn');inp.disabled=false;inp.placeholder=d.group?'Conversar em '+d.name:'Conversar com '+d.name;inp.focus();
+  const inp=$('msgIn');inp.disabled=false;inp.placeholder=d.group?'Conversar em '+d.name:'Conversar com '+d.name;if(!matchMedia('(pointer:coarse)').matches)inp.focus();
   un.msg=listenMsgs(query(ref(db,'dmMessages/'+id),limitToLast(100)));
 }
 function openDmView(id,d){if(!cur.home)goHome();pickDm(id,d)}
@@ -954,7 +954,7 @@ function pickChannel(cid,name){
   const t=$('chtitle');t.innerHTML='';t.append(el('i','','#'),document.createTextNode(name));
   const box=$('msgs');box.innerHTML='';
   const e=el('div','empty');e.id='emptyMsg';e.append(el('h2','','Bem-vindo ao #'+name),el('div','','Este é o começo do canal. Mande a primeira mensagem!'));box.append(e);
-  const inp=$('msgIn');inp.disabled=false;inp.placeholder='Conversar em #'+name;inp.focus();
+  const inp=$('msgIn');inp.disabled=false;inp.placeholder='Conversar em #'+name;if(!matchMedia('(pointer:coarse)').matches)inp.focus();
   un.msg=listenMsgs(query(ref(db,'messages/'+cur.sid+'/'+cid),limitToLast(100)));
 }
 
