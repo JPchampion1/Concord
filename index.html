@@ -425,6 +425,34 @@ body[data-theme="black"]{--bg1:#000;--bg2:#0b0b0c;--bg3:#111113;--hov:#1b1b1e;--
   #form textarea{min-height:48px;padding:14px 16px}
   #form.typing #micBtn{display:none}
 }
+
+/* ---------- configurações do servidor ---------- */
+#srvSet{display:grid;place-items:center;width:28px;height:28px;flex:none;border-radius:4px;background:none;color:var(--mut)}
+#srvSet:hover{color:var(--txt)}#srvSet .i{width:18px;height:18px}#srvSet.hidden{display:none}
+.sv{background-size:cover;background-position:center}
+.sc.wide{max-width:1000px}
+.sp{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:40px;align-items:start}
+.sp h2{margin:0 0 6px;font-size:20px}.sp .sub{margin:0 0 8px;font-size:14px;color:var(--mut)}
+.sp h4{margin:0 0 8px;font-size:15px}
+.sp .blk{padding:24px 0;border-top:1px solid #3f4147}.sp .blk:first-of-type{border-top:0}
+.sp .nm{width:100%;height:44px;padding:0 14px;border:1px solid #3f4147;border-radius:6px;background:var(--bg1);color:var(--txt)}
+.sp .btns{display:flex;gap:8px;flex-wrap:wrap}
+.bnr{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+.bnr button{height:70px;border-radius:8px;border:2px solid transparent}
+.bnr button.on{border-color:#fff}
+.trs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.tr{display:flex;align-items:center;gap:6px;height:44px;padding:0 8px;border:1px solid #3f4147;border-radius:6px;background:var(--bg1)}
+.tr input{min-width:0;height:100%;border:0;background:none;color:var(--txt)}
+.tr .te{flex:none;width:32px;text-align:center;font-size:18px}.tr .tt{flex:1}
+.pv{position:sticky;top:0;border-radius:12px;overflow:hidden;background:var(--bg2);border:1px solid #3f4147}
+.pv .bn{height:130px}
+.pv .bd2{position:relative;padding:44px 16px 16px}
+.pv .ic{position:absolute;top:-38px;left:16px;width:76px;height:76px;border-radius:50%;border:5px solid var(--bg2);background:#4e5058 center/cover;display:grid;place-items:center;font-weight:700;font-size:24px}
+.pv b{display:block;font-size:17px;overflow-wrap:anywhere}.pv small{display:block;margin-top:2px;color:var(--mut)}
+.pv .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}.pv .chips span{padding:3px 8px;border-radius:12px;background:var(--bg1);font-size:12px}
+.sbar{position:sticky;bottom:0;display:none;align-items:center;gap:8px;margin-top:24px;padding:10px 12px;border-radius:8px;background:var(--bg1);box-shadow:0 4px 16px rgba(0,0,0,.5)}
+.sbar.on{display:flex}.sbar span{flex:1;font-size:14px}
+@media(max-width:900px){.sp{grid-template-columns:1fr}.pv{position:static;order:-1}.trs{grid-template-columns:1fr 1fr}}
 </style>
 </head>
 <body>
@@ -456,7 +484,7 @@ body[data-theme="black"]{--bg1:#000;--bg2:#0b0b0c;--bg3:#111113;--hov:#1b1b1e;--
 <div id="app" class="hidden">
   <nav id="servers" aria-label="Servidores"></nav>
   <aside id="side">
-    <div id="sname"><span id="sTitle">Concord</span><button id="invite" class="hidden" title="Copiar código de convite">Convite</button></div>
+    <div id="sname"><span id="sTitle">Concord</span><button id="invite" class="hidden" title="Copiar código de convite">Convite</button><button id="srvSet" class="hidden" title="Configurações do servidor" aria-label="Configurações do servidor" data-ic="settings"></button></div>
     <div id="chans"></div>
     <div id="me">
       <div class="av" id="meAv"><span class="dot"></span></div>
@@ -669,20 +697,34 @@ onAuthStateChanged(auth,u=>{
   // servidores
   stop('srv');
   un.srv=onValue(ref(db,'userServers/'+u.uid),s=>{
-    const list=s.val()||{};drawServers(list);
+    const list=s.val()||{};srvList=list;syncSrv(list);drawServers(list);
     if(!list[cur.sid]&&!cur.home){const first=Object.keys(list)[0];first?pickServer(first,list[first].name):goHome()}
   });
   if(inviteParam){const k=inviteParam;inviteParam=null;history.replaceState(null,'',location.pathname);inviteModal(k)}
 });
 
 /* ---------- Servidores ---------- */
+let srvList={},srvMeta={},srvUn={},imgCache={};
+const loadImg=async id=>{if(imgCache[id])return imgCache[id];const v=(await get(ref(db,'images/'+id))).val();if(v)imgCache[id]=v;return v};
+function syncSrv(list){
+  for(const id of Object.keys(srvUn))if(!list[id]){srvUn[id]();delete srvUn[id];delete srvMeta[id]}
+  for(const id of Object.keys(list))if(!srvUn[id])srvUn[id]=onValue(ref(db,'servers/'+id),sn=>{
+    if(!sn.exists()){remove(ref(db,'userServers/'+me.uid+'/'+id)).catch(()=>{});return} // servidor excluído
+    srvMeta[id]=sn.val();drawServers(srvList);if(cur.sid===id)srvHead();
+  });
+}
+function srvHead(){const m=srvMeta[cur.sid];if(!m)return;$('sTitle').textContent=m.name;$('srvSet').classList.toggle('hidden',m.owner!==me.uid)}
+function paintSrv(b,sid,nm){
+  const m=srvMeta[sid]||{};b.textContent=nm.slice(0,2).toUpperCase();b.style.backgroundImage='';
+  if(m.icon)loadImg(m.icon).then(u=>{if(u&&b.isConnected){b.style.backgroundImage='url("'+u+'")';b.textContent=''}}).catch(()=>{});
+}
 function drawServers(list){
   const nav=$('servers');nav.innerHTML='';
   const hb=el('button','sv home'+(cur.home?' on':''));hb.id='homeBtn';hb.title='Mensagens diretas';
   hb.onclick=()=>{if(!cur.home)goHome()};nav.append(hb,el('div','sep'));
   for(const [sid,s] of Object.entries(list)){
-    const b=el('button','sv'+(sid===cur.sid?' on':''),s.name.slice(0,2).toUpperCase());
-    b.title=s.name;b.onclick=()=>pickServer(sid,s.name);nav.append(b);
+    const nm=(srvMeta[sid]||{}).name||s.name,b=el('button','sv'+(sid===cur.sid?' on':''));
+    b.title=nm;b.onclick=()=>pickServer(sid,nm);paintSrv(b,sid,nm);nav.append(b);
   }
   nav.append(el('div','sep'));
   const add=ib('sv add','plus');add.title='Adicionar um servidor';add.onclick=chooseView;
@@ -928,7 +970,7 @@ $('invite').onclick=inviteView;
 function goHome(){
   ['ch','mem','msg','dm'].forEach(stop);cur={sid:null,cid:null,dm:null,home:true};members={};
   document.querySelectorAll('.sv').forEach(b=>b.classList.toggle('on',b.id==='homeBtn'));
-  $('sTitle').textContent='Mensagens diretas';$('invite').classList.add('hidden');
+  $('sTitle').textContent='Mensagens diretas';$('invite').classList.add('hidden');$('srvSet').classList.add('hidden');
   $('chtitle').innerHTML='';$('members').innerHTML='';
   const box=$('msgs');box.innerHTML='';
   const e=el('div','empty');e.append(el('h2','','Suas conversas'),el('div','','Escolha uma conversa à esquerda ou comece uma nova.'));box.append(e);
@@ -1004,7 +1046,7 @@ async function createGroup(name,people){
 function pickServer(sid,name){
   if(cur.sid===sid&&un.ch)return;
   stop('ch');stop('mem');stop('msg');stop('dm');cur={sid,cid:null};
-  $('sTitle').textContent=name;$('invite').classList.remove('hidden');
+  $('sTitle').textContent=name;$('invite').classList.remove('hidden');srvHead();
   document.querySelectorAll('.sv').forEach(b=>b.classList.toggle('on',b.title===name));
   un.ch=onValue(ref(db,'channels/'+sid),s=>{
     const chs=s.val()||{};drawChannels(chs);
@@ -1365,6 +1407,86 @@ function openSettings(tab){
 }
 const closeSettings=()=>S.classList.add('hidden');
 $('setBtn').onclick=()=>openSettings('account');
+/* ---------- Configurações do servidor (só o dono) ---------- */
+const BNR=[['#1e90d8','#8be9ff'],['#ff1493','#ff9ad5'],['#d81818','#ff6a6a'],['#e8661a','#ffb36b'],['#e0b81c','#fff08a'],['#6a2c91','#c78ae0'],['#0a8cf0','#7fd4ff'],['#3fd1c0','#c6fff4'],['#2f5a0a','#6fae2a'],['#1d1d1f','#6b6b70']];
+const bnrBg=i=>{const g=BNR[i]||BNR[0];return 'linear-gradient(180deg,'+g[0]+','+g[1]+')'};
+const PUSHC='-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz';
+const sidTime=id=>{let t=0;for(const c of id.slice(0,8))t=t*64+PUSHC.indexOf(c);return t}; // o id do Firebase guarda a data de criação
+$('srvSet').onclick=()=>openServerSettings(cur.sid);
+function openServerSettings(sid,tab){
+  const m=srvMeta[sid];if(!m||m.owner!==me.uid)return;
+  tab=tab||'perfil';S.classList.remove('hidden');S.innerHTML='';
+  const nav=el('nav'),sec=el('section'),c=el('div','sc wide'),x=ib('sx','x');x.setAttribute('aria-label','Fechar');x.onclick=closeSettings;
+  nav.append(el('h3','',m.name),
+    btn('Perfil do servidor',()=>openServerSettings(sid,'perfil'),'sn'+(tab==='perfil'?' on':'')),
+    btn('Convites',()=>openServerSettings(sid,'convites'),'sn'+(tab==='convites'?' on':'')),
+    btn('Excluir servidor',()=>delServer(sid),'sn red'));
+  sec.append(c);S.append(nav,sec,x);
+  if(tab==='convites'){c.append(el('h1','','Convites'),sRow('Link de convite',linkOf(sid),btn('Copiar',()=>navigator.clipboard.writeText(linkOf(sid)).then(()=>toast('Link copiado.')).catch(()=>toast('Copie manualmente: '+linkOf(sid))),'pri')))}
+  else srvProfile(c,sid);
+}
+async function delServer(sid){
+  const m=srvMeta[sid];if(!m||m.owner!==me.uid)return;
+  if(!confirm('Excluir "'+m.name+'"? O servidor some para todos e isso não pode ser desfeito.'))return;
+  try{await update(ref(db),{['servers/'+sid]:null,['channels/'+sid]:null,['userServers/'+me.uid+'/'+sid]:null});closeSettings()}
+  catch{toast('Não foi possível excluir o servidor.')}
+}
+function srvProfile(c,sid){
+  const m=srvMeta[sid];
+  const saved={name:m.name,icon:m.icon||null,banner:m.banner||0,traits:(Array.isArray(m.traits)?m.traits:[]).filter(Boolean).slice(0,5).map(t=>({e:t.e||'😊',t:t.t||''}))};
+  while(saved.traits.length<5)saved.traits.push({e:'😊',t:''});
+  const d=JSON.parse(JSON.stringify(saved));let iconUrl=null,iconFile=null;
+  const wrap=el('div','sp'),left=el('div'),pv=el('div','pv');
+  left.innerHTML=`<h2>Perfil do servidor</h2><div class="sub">Personalize como seu servidor aparece em links de convite e para os membros.</div>
+    <div class="blk"><h4>Nome</h4><input class="nm" maxlength="32" autocomplete="off"></div>
+    <div class="blk"><h4>Ícone</h4><div class="sub" style="margin-bottom:12px">Recomendamos uma imagem de, pelo menos, 512x512.</div><div class="btns"></div></div>
+    <div class="blk"><h4>Faixa</h4><div class="bnr"></div></div>
+    <div class="blk"><h4>Características</h4><div class="sub" style="margin-bottom:12px">Adicione até 5 características para mostrar os interesses e a personalidade do seu servidor.</div><div class="trs"></div></div>`;
+  const bar=el('div','sbar'),dirty=()=>bar.classList.toggle('on',iconFile!==null||JSON.stringify(d)!==JSON.stringify(saved));
+  const pvDraw=()=>{
+    const mem=Object.keys((srvMeta[sid]||{}).members||{}),on=mem.filter(u=>stOf(pres[u])!=='offline').length;
+    pv.innerHTML='<div class="bn"></div><div class="bd2"><div class="ic"></div><b></b><small class="cnt"></small><small class="since"></small><div class="chips"></div></div>';
+    pv.querySelector('.bn').style.background=bnrBg(d.banner);
+    const ic_=pv.querySelector('.ic'),u=iconUrl||(d.icon&&imgCache[d.icon]);
+    if(u)ic_.style.backgroundImage='url("'+u+'")';else ic_.textContent=(d.name||'?').slice(0,2).toUpperCase();
+    pv.querySelector('b').textContent=d.name||'Servidor';
+    pv.querySelector('.cnt').textContent=on+' online · '+mem.length+(mem.length===1?' membro':' membros');
+    pv.querySelector('.since').textContent='Desde '+new Date(sidTime(sid)).toLocaleDateString('pt-BR',{month:'short',year:'numeric'});
+    const ch=pv.querySelector('.chips');d.traits.filter(t=>t.t.trim()).forEach(t=>ch.append(el('span','',t.e+' '+t.t.trim())));
+  };
+  const nm=left.querySelector('.nm');nm.value=d.name;nm.oninput=()=>{d.name=nm.value;pvDraw();dirty()};
+  const file=document.createElement('input');file.type='file';file.accept='image/*';
+  file.onchange=()=>{const f=file.files[0];file.value='';if(!f||!f.type.startsWith('image/'))return;iconFile=f;iconUrl=URL.createObjectURL(f);pvDraw();dirty()};
+  const rm=btn('Remover o ícone',()=>{iconFile=null;iconUrl=null;d.icon=null;pvDraw();dirty()},'sec');rm.style.color='var(--err)';
+  left.querySelector('.btns').append(btn('Altere o ícone do servidor',()=>file.click(),'pri'),rm);
+  const bn=left.querySelector('.bnr');
+  BNR.forEach((_,i)=>{const b=el('button',i===d.banner?'on':'');b.type='button';b.style.background=bnrBg(i);
+    b.onclick=()=>{d.banner=i;[...bn.children].forEach((x,j)=>x.classList.toggle('on',j===i));pvDraw();dirty()};bn.append(b)});
+  const trs=left.querySelector('.trs');
+  d.traits.forEach((t,i)=>{
+    const r=el('div','tr'),e=document.createElement('input'),x=document.createElement('input');
+    e.className='te';e.maxLength=4;e.value=t.e;x.className='tt';x.maxLength=24;x.value=t.t;x.placeholder='Característica '+(i+1);
+    e.oninput=()=>{t.e=e.value||'😊';pvDraw();dirty()};x.oninput=()=>{t.t=x.value;pvDraw();dirty()};r.append(e,x);trs.append(r);
+  });
+  const sv=btn('Salvar alterações',async()=>{
+    const name=d.name.trim();if(!name)return toast('Dê um nome ao servidor.');
+    sv.disabled=true;
+    try{
+      let icon=d.icon;
+      if(iconFile){
+        let r=await shrink(iconFile,512,.8,false);if(r.url.length>380000)r=await shrink(iconFile,320,.7,false);
+        icon=push(ref(db,'images')).key;await set(ref(db,'images/'+icon),r.url);imgCache[icon]=r.url;
+      }
+      const traits=d.traits.filter(t=>t.t.trim()).map(t=>({e:(t.e||'😊').slice(0,4),t:t.t.trim().slice(0,24)}));
+      await update(ref(db,'servers/'+sid),{name:name.slice(0,32),icon:icon||null,banner:d.banner,traits:traits.length?traits:null});
+      toast('Alterações salvas.');openServerSettings(sid,'perfil');
+    }catch{toast('Não foi possível salvar. Confira as regras do banco de dados.');sv.disabled=false}
+  },'pri');
+  bar.append(el('span','','Cuidado — você tem alterações não salvas!'),btn('Redefinir',()=>openServerSettings(sid,'perfil'),'lnk'),sv);
+  wrap.append(left,pv);c.append(wrap,bar);pvDraw();
+  if(d.icon&&!imgCache[d.icon])loadImg(d.icon).then(pvDraw).catch(()=>{});
+}
+
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!S.classList.contains('hidden')&&ov.classList.contains('hidden'))closeSettings()});
 
 /* ---------- GIF (Klipy), emoji e áudio ---------- */
