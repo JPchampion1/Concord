@@ -559,6 +559,11 @@ body.dnd{cursor:grabbing}
   .sc input,.tr input,.cpop .hex,.md select{font-size:16px}
   .md .pad{padding:20px 12px 12px}
 }
+
+.rg2 .pgh{margin:28px 0 0;padding-top:20px;border-top:1px solid #3f4147;font-size:12px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--mut)}
+.rg2 .pgh.first{margin-top:0;padding-top:0;border-top:0}
+.rg2 .sr,#pvRows .sr{padding:16px 0;border-bottom:1px solid #3f4147}
+.rg2 .sr:last-child,#pvRows .sr:last-child{border-bottom:0}
 </style>
 </head>
 <body>
@@ -821,7 +826,7 @@ function syncSrv(list){
     srvMeta[id]=sn.val();drawServers(srvList);if(cur.sid===id){srvHead();refreshChans()}
   });
 }
-function srvHead(){const m=srvMeta[cur.sid];if(!m)return;$('sTitle').textContent=m.name;$('srvSet').classList.toggle('hidden',!(m.owner===me.uid||permIn(cur.sid,me.uid,'manage_roles')))}
+function srvHead(){const m=srvMeta[cur.sid];if(!m)return;$('sTitle').textContent=m.name;$('srvSet').classList.toggle('hidden',!(m.owner===me.uid||permIn(cur.sid,me.uid,'manage_server')||permIn(cur.sid,me.uid,'manage_roles')));$('invite').classList.toggle('hidden',!permIn(cur.sid,me.uid,'invite'))}
 function paintSrv(b,sid,nm){
   const m=srvMeta[sid]||{};b.textContent=nm.slice(0,2).toUpperCase();b.style.backgroundImage='';
   if(m.icon)loadImg(m.icon).then(u=>{if(u&&b.isConnected){b.style.backgroundImage='url("'+u+'")';b.textContent=''}}).catch(()=>{});
@@ -1058,6 +1063,7 @@ function channelView(cat){
   showModal(d);
 }
 function inviteView(){
+  if(!permIn(cur.sid,me.uid,'invite'))return toast('Você não tem permissão para criar convites.');
   const d=view(`<div class="pad"><h2>Convide seus amigos</h2><p>Envie este link para quem você quer chamar. Quando alguém colar no chat, aparece o convite com o botão Entrar.</p>
     <label class="lb" for="mIn">Link de convite</label><div class="copy"><input id="mIn" readonly><button class="b2 pri" id="mCp">Copiar</button></div><div class="err"></div></div>`);
   const inp=d.querySelector('#mIn'),link=linkOf(cur.sid);inp.value=link;
@@ -1286,7 +1292,7 @@ $('form').onsubmit=async ev=>{
   inp.value='';clearPend();growIn();
   closeMen();if(matchMedia('(pointer:coarse)').matches)inp.focus();
   if(att)return sendImage(att,text.slice(0,2000));
-  if(/^https:\/\/[^\s]+\.(?:gif|webp)(?:\?[^\s]*)?$/i.test(text))return post({gif:text}).catch(()=>toast('Não foi possível enviar o GIF.'));
+  if(okp('gifs')&&/^https:\/\/[^\s]+\.(?:gif|webp)(?:\?[^\s]*)?$/i.test(text))return post({gif:text}).catch(()=>toast('Não foi possível enviar o GIF.'));
   await post({text:text.slice(0,2000),...mentionData(text.slice(0,2000))});
 };
 
@@ -1321,6 +1327,7 @@ pickImg.onchange=()=>{stageImage(pickImg.files[0]);pickImg.value=''};
 // imagem escolhida/colada fica numa prévia acima da caixa de texto até enviar
 function stageImage(f){
   if(!f||!f.type.startsWith('image/')||!(cur.cid||cur.dm))return;
+  if(!okp('attach'))return toast('Você não tem permissão para enviar imagens aqui.');
   clearPend();pendImg={file:f,url:URL.createObjectURL(f)};
   const bar=$('attbar');bar.querySelector('img').src=pendImg.url;bar.classList.add('on');
   growIn();if(!matchMedia('(pointer:coarse)').matches)$('msgIn').focus();
@@ -1344,9 +1351,10 @@ $('attach').onclick=()=>{
   if(plusMenu.classList.contains('on'))return closePlus();
   closePick();closeMen();plusMenu.innerHTML='';
   const mk=(icon,label,fn)=>{const b=el('button');b.type='button';b.innerHTML=ic(icon);b.append(el('span','',label));b.onclick=()=>{closePlus();fn()};plusMenu.append(b)};
-  mk('upload','Enviar um arquivo',()=>pickImg.click());
-  mk('poll','Criar enquete',pollView);
-  if(matchMedia('(pointer:coarse)').matches)mk('gif','GIF',()=>openPick('gif'));
+  if(okp('attach'))mk('upload','Enviar um arquivo',()=>pickImg.click());
+  if(okp('polls'))mk('poll','Criar enquete',pollView);
+  if(okp('gifs')&&matchMedia('(pointer:coarse)').matches)mk('gif','GIF',()=>openPick('gif'));
+  if(!plusMenu.children.length)return toast('Você não tem permissão para enviar isso aqui.');
   plusMenu.classList.add('on');
 };
 document.addEventListener('mousedown',e=>{if(!e.target.closest('#plusMenu,#attach'))closePlus()});
@@ -1426,7 +1434,7 @@ function pollBox(m){
   return box;
 }
 function pollView(){
-  if(!(cur.cid||cur.dm))return;
+  if(!(cur.cid||cur.dm)||!okp('polls'))return;
   const d=view(`<div class="pad"><h2>Criar enquete</h2>
     <label class="lb" for="pQ">Pergunta</label><input id="pQ" maxlength="300" autocomplete="off" placeholder="Qual é a sua pergunta?">
     <label class="lb" style="margin-top:16px">Respostas</label><div id="pOpts"></div>
@@ -1585,8 +1593,16 @@ const sidTime=id=>{let t=0;for(const c of id.slice(0,8))t=t*64+PUSHC.indexOf(c);
 $('srvSet').onclick=()=>openServerSettings(cur.sid);
 
 /* ---------- Permissões ---------- */
-const PERMS={view:'Ver canais',send:'Enviar mensagens',react:'Adicionar reações',manage_messages:'Gerenciar mensagens',manage_channels:'Gerenciar canais',manage_roles:'Gerenciar cargos'};
-const CH_PERMS=['view','send','react','manage_messages'];
+const PERMS={view:'Ver canais',manage_server:'Gerenciar servidor',manage_channels:'Gerenciar canais',manage_roles:'Gerenciar cargos',invite:'Criar convites',
+  send:'Enviar mensagens',attach:'Enviar imagens',gifs:'Enviar GIFs',polls:'Criar enquetes',audio:'Enviar mensagens de áudio',react:'Adicionar reações',manage_messages:'Gerenciar mensagens',
+  administrator:'Administrador'};
+const PDESC={view:'Permite ver os canais e ler as mensagens.',manage_server:'Permite editar nome, ícone, faixa e características do servidor.',manage_channels:'Permite criar, editar, excluir e reorganizar canais e categorias.',manage_roles:'Permite criar e editar cargos e dá-los aos membros.',invite:'Permite ver e copiar o link de convite do servidor.',
+  send:'Permite escrever mensagens nos canais.',attach:'Permite enviar imagens, inclusive coladas.',gifs:'Permite enviar GIFs e links de GIF.',polls:'Permite criar enquetes.',audio:'Permite gravar e enviar mensagens de áudio.',react:'Permite reagir às mensagens com emojis.',manage_messages:'Permite apagar mensagens de outros membros.',
+  administrator:'Concede todas as permissões e ignora as restrições de canal. Dê só a quem for de total confiança.'};
+const PGROUPS=[['Geral do servidor',['view','manage_server','manage_channels','manage_roles','invite']],['Mensagens',['send','attach','gifs','polls','audio','react','manage_messages']],['Avançado',['administrator']]];
+const CH_PERMS=['view','send','attach','gifs','polls','audio','react','manage_messages'];
+const DEF_EVERYONE={view:true,send:true,react:true,attach:true,gifs:true,polls:true,audio:true,invite:true}; // o que todo membro já podia fazer antes dos cargos
+const okp=p=>!cur.sid||permIn(cur.sid,me.uid,p,lastChs[cur.cid]);
 let lastChs={},colCats=new Set(),suppress=false,dnd=null,ghost=null;
 const byPos=(a,b)=>((a[1].pos??1e9)-(b[1].pos??1e9))||(a[0]<b[0]?-1:1);
 function layoutOf(chs,cats){
@@ -1596,7 +1612,7 @@ function layoutOf(chs,cats){
 }
 function rolesOf(sid){
   const raw=(srvMeta[sid]||{}).roles||{},r={...raw},ev=raw.everyone||{};
-  r.everyone={name:'@everyone',color:'',perms:ev.perms||{view:true,send:true,react:true}};return r;
+  r.everyone={name:'@everyone',color:'',perms:{...DEF_EVERYONE,...(ev.perms||{})}};return r;
 }
 const rolePos=R=>Object.keys(R).filter(k=>k!=='everyone').sort();
 const myRoles=(sid,uid)=>Object.keys((((srvMeta[sid]||{}).members||{})[uid]||{}).roles||{});
@@ -1605,6 +1621,7 @@ function permIn(sid,uid,perm,c){
   const m=srvMeta[sid];if(!m)return perm==='view'||perm==='send'||perm==='react';
   if(m.owner===uid)return true;
   const R=rolesOf(sid),ids=['everyone',...myRoles(sid,uid)];let ok=false;
+  for(const id of ids)if(R[id]&&R[id].perms&&R[id].perms.administrator)return true; // administrador ignora tudo
   for(const id of ids)if(R[id]&&R[id].perms&&R[id].perms[perm])ok=true;
   if(c&&CH_PERMS.includes(perm)){
     const ow=effOw(sid,c),ev=ow.everyone||{};
@@ -1699,9 +1716,9 @@ chansEl.addEventListener('click',e=>{if(suppress){e.stopPropagation();e.preventD
 /* ---------- Configurações do servidor: abas ---------- */
 function openServerSettings(sid,tab,sel,sub){
   const m=srvMeta[sid];if(!m)return;
-  const own=m.owner===me.uid,mr=permIn(sid,me.uid,'manage_roles');
-  if(!own&&!mr)return;
-  const tabs=[...(own?[['perfil','Perfil do servidor'],['convites','Convites']]:[]),...(mr?[['cargos','Cargos']]:[])];
+  const own=m.owner===me.uid,ms=own||permIn(sid,me.uid,'manage_server'),mr=permIn(sid,me.uid,'manage_roles');
+  if(!ms&&!mr)return;
+  const tabs=[...(ms?[['perfil','Perfil do servidor'],['convites','Convites']]:[]),...(mr?[['cargos','Cargos']]:[])];
   if(!tabs.some(t=>t[0]===tab))tab=tabs[0][0];
   S.classList.remove('hidden');S.innerHTML='';
   const nav=el('nav'),sec=el('section'),c=el('div','sc wide'),x=ib('sx','x');x.setAttribute('aria-label','Fechar');x.onclick=closeSettings;
@@ -1775,12 +1792,11 @@ function srvRoles(c,sid,sel,sub){
     },'sec');del.style.color='var(--err)';del.style.marginTop='32px';main.append(del);
   }else if(sub==='perm'){
     if(ev)main.append(el('div','sub','Permissões padrão de todos os membros do servidor.'));
-    for(const k of Object.keys(PERMS)){
-      main.append(sRow(PERMS[k],'',sw(!!(r.perms||{})[k],v=>{
-        const p={};Object.keys(PERMS).forEach(x=>{p[x]=x===k?v:!!(r.perms||{})[x]});
-        set(ref(db,base+'/perms'),p).catch(fail);
-      })));
-    }
+    const perms={};Object.keys(PERMS).forEach(x=>{perms[x]=!!(r.perms||{})[x]});
+    PGROUPS.forEach(([title,keys],gi)=>{
+      main.append(el('h3','pgh'+(gi||ev?'':' first'),title));
+      keys.forEach(k=>main.append(sRow(PERMS[k],PDESC[k],sw(perms[k],v=>{perms[k]=v;set(ref(db,base+'/perms'),{...perms}).catch(fail)}))));
+    });
   }else{
     members.sort((a,b)=>String(a[1].name).localeCompare(String(b[1].name))).forEach(([uid,u])=>{
       main.append(sRow(u.name||'?','',sw(!!(u.roles||{})[sel],v=>set(ref(db,'servers/'+sid+'/members/'+uid+'/roles/'+sel),v?true:null).then(again).catch(fail))));
@@ -2068,7 +2084,7 @@ function gifBox(m){
   if(okGif(m.gif)){i.src=m.gif;i.onclick=()=>lightbox(m.gif)}
   return i;
 }
-$('gifBtn').onclick=()=>openPick('gif');
+$('gifBtn').onclick=()=>okp('gifs')?openPick('gif'):toast('Você não tem permissão para enviar GIFs aqui.');
 $('emoBtn').onclick=()=>openPick('emoji');
 document.addEventListener('mousedown',e=>{if(pickMode&&!e.target.closest('#pick,#gifBtn,#emoBtn,#plusMenu'))closePick()});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&pickMode)closePick()});
@@ -2076,6 +2092,7 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&pickMode)closePick(
 let rec=null;const fmtT=s=>Math.floor(s/60)+':'+String(Math.floor(s%60)).padStart(2,'0');
 async function startRec(){
   if(!canSend()||rec)return;
+  if(!okp('audio'))return toast('Você não tem permissão para enviar áudio aqui.');
   if(!navigator.mediaDevices||!window.MediaRecorder)return toast('Seu navegador não suporta gravação de áudio.');
   let stream;try{stream=await navigator.mediaDevices.getUserMedia({audio:true})}catch{return toast('Permita o uso do microfone para gravar.')}
   closePick();
