@@ -425,6 +425,7 @@ body[data-theme="black"]{--bg1:#000;--bg2:#0b0b0c;--bg3:#111113;--hov:#1b1b1e;--
   #sendBtn .i{width:26px;height:26px}
   #form textarea{min-height:48px;padding:14px 12px}
   #form.typing #micBtn{display:none}
+  #gifBtn{display:none}
 }
 
 /* ---------- configurações do servidor ---------- */
@@ -500,6 +501,7 @@ body[data-theme="black"]{--bg1:#000;--bg2:#0b0b0c;--bg3:#111113;--hov:#1b1b1e;--
     <div id="replybar"><span>Respondendo a <b></b></span><small></small><button type="button" id="rpX" title="Cancelar resposta" data-ic="x"></button></div>
     <div id="attbar"><div class="ai"><img alt="Imagem a enviar"><button type="button" id="attX" title="Remover imagem" aria-label="Remover imagem" data-ic="x"></button></div></div>
     <form id="form"><button type="button" id="attach" title="Adicionar" data-ic="plus"></button><textarea id="msgIn" rows="1" maxlength="2000" autocomplete="off" disabled placeholder="Selecione um canal"></textarea>
+      <button type="button" class="fb" id="gifBtn" title="GIF">GIF</button>
       <button type="button" class="fb" id="emoBtn" title="Emoji" data-ic="smile"></button>
       <button type="button" class="fb" id="micBtn" title="Gravar áudio" data-ic="mic"></button>
       <button type="submit" class="fb" id="sendBtn" title="Enviar" data-ic="send"></button>
@@ -1212,7 +1214,7 @@ $('attach').onclick=()=>{
   const mk=(icon,label,fn)=>{const b=el('button');b.type='button';b.innerHTML=ic(icon);b.append(el('span','',label));b.onclick=()=>{closePlus();fn()};plusMenu.append(b)};
   mk('upload','Enviar um arquivo',()=>pickImg.click());
   mk('poll','Criar enquete',pollView);
-  mk('gif','GIF',()=>openPick('gif'));
+  if(matchMedia('(pointer:coarse)').matches)mk('gif','GIF',()=>openPick('gif'));
   plusMenu.classList.add('on');
 };
 document.addEventListener('mousedown',e=>{if(!e.target.closest('#plusMenu,#attach'))closePlus()});
@@ -1509,11 +1511,11 @@ const norm=t=>t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
 const canSend=()=>!!(cur.cid||cur.dm);
 function toast(t){const e=el('div','toast',t);document.body.append(e);setTimeout(()=>e.remove(),3500)}
 const pick=$('pick');let pickMode=null,gq='',gpage=1,gmore=false,gbusy=false,gtimer,gseq=0;
-function closePick(){pickMode=null;pick.classList.remove('on');pick.innerHTML='';$('emoBtn').classList.remove('on')}
+function closePick(){pickMode=null;pick.classList.remove('on');pick.innerHTML='';$('gifBtn').classList.remove('on');$('emoBtn').classList.remove('on')}
 function openPick(mode){
   if(pickMode===mode)return closePick();
   if(!canSend())return;
-  closePlus();closePick();pickMode=mode;pick.classList.add('on');if(mode==='emoji')$('emoBtn').classList.add('on');
+  closePlus();closePick();pickMode=mode;pick.classList.add('on');$(mode==='gif'?'gifBtn':'emoBtn').classList.add('on');
   pick.innerHTML='<div class="phd"><button type="button" class="gback" id="gback" aria-label="Voltar">'+ic('chev')+'</button><div class="sbox">'+ic('search')+'<input id="pq" type="search" autocomplete="off"></div></div><div class="pbd" id="pbd"></div><div class="pft"></div>';
   const q=$('pq'),bd=$('pbd'),ft=pick.querySelector('.pft');
   q.placeholder=mode==='gif'?'Pesquisar GIFs ou colar um link':'Buscar emoji';
@@ -1650,8 +1652,9 @@ function gifBox(m){
   if(okGif(m.gif)){i.src=m.gif;i.onclick=()=>lightbox(m.gif)}
   return i;
 }
+$('gifBtn').onclick=()=>openPick('gif');
 $('emoBtn').onclick=()=>openPick('emoji');
-document.addEventListener('mousedown',e=>{if(pickMode&&!e.target.closest('#pick,#emoBtn,#plusMenu'))closePick()});
+document.addEventListener('mousedown',e=>{if(pickMode&&!e.target.closest('#pick,#gifBtn,#emoBtn,#plusMenu'))closePick()});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&pickMode)closePick()});
 // ---- áudio
 let rec=null;const fmtT=s=>Math.floor(s/60)+':'+String(Math.floor(s%60)).padStart(2,'0');
