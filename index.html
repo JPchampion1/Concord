@@ -849,6 +849,17 @@ function showModal(node){
 }
 let lockModal=false;
 function closeModal(){lockModal=false;ov.classList.add('hidden');ov.innerHTML=''}
+// confirmação própria do app (substitui o confirm() do navegador)
+function ask(msg,okLabel){
+  return new Promise(res=>{
+    const d=view(`<div class="pad"><h2>Confirmar</h2><p></p></div><div class="foot2"><button class="b2 lnk" id="aNo">Cancelar</button><button class="b2 pri" id="aOk"></button></div>`);
+    d.querySelector('p').textContent=msg;
+    const ok=d.querySelector('#aOk');ok.textContent=okLabel||'OK';ok.style.background='var(--err)';ok.style.color='#fff';
+    d.querySelector('#aNo').onclick=()=>{closeModal();res(false)};
+    ok.onclick=()=>{closeModal();res(true)};
+    showModal(d);
+  });
+}
 // ---------- CELULAR: menus laterais (servidores/canais e membros) ----------
 const appEl=$('app'),isMob=()=>matchMedia('(max-width:700px)').matches,isTab=()=>matchMedia('(max-width:900px)').matches;
 const setNav=o=>{appEl.classList.toggle('nav-open',o);if(o)appEl.classList.remove('mem-open')};
@@ -1529,7 +1540,7 @@ const PAGES={
     const fs=friendsArr();
     if(!fs.length)c.append(el('div','uempty','Você ainda não tem amigos.'));
     for(const f of fs)c.append(sRow(f.name,friendList[f.uid].username?'@'+friendList[f.uid].username:'',btn('Remover',async()=>{
-      if(!confirm('Remover '+f.name+' dos amigos?'))return;
+      if(!await ask('Remover '+f.name+' dos amigos?','Remover'))return;
       try{await update(ref(db),{['friends/'+me.uid+'/'+f.uid]:null,['friends/'+f.uid+'/'+me.uid]:null})}catch{}
       openSettings()},'lnk')));
   },
@@ -1759,7 +1770,7 @@ function srvRoles(c,sid,sel,sub){
     const grid=el('div','pgrid');PAL.forEach(col=>{const b=el('button',col===cur_?'on':'');b.type='button';b.style.background=col;b.onclick=()=>set(ref(db,base+'/color'),col).then(again).catch(fail);grid.append(b)});
     row.append(def,cb,grid);main.append(row,pop);
     const del=btn('Excluir cargo',async()=>{
-      if(!confirm('Excluir o cargo "'+r.name+'"?'))return;
+      if(!await ask('Excluir o cargo "'+r.name+'"?','Excluir'))return;
       try{await update(ref(db),{[base]:null});openServerSettings(sid,'cargos')}catch{toast('Não foi possível excluir o cargo.')}
     },'sec');del.style.color='var(--err)';del.style.marginTop='32px';main.append(del);
   }else if(sub==='perm'){
@@ -1778,7 +1789,7 @@ function srvRoles(c,sid,sel,sub){
   wrap.append(side,main);c.append(wrap);
 }
 async function delCat(sid,k){
-  const cats=(srvMeta[sid]||{}).cats||{};if(!cats[k]||!confirm('Excluir a categoria "'+cats[k].name+'"? Os canais dela ficam sem categoria.'))return;
+  const cats=(srvMeta[sid]||{}).cats||{};if(!cats[k]||!await ask('Excluir a categoria "'+cats[k].name+'"? Os canais dela ficam sem categoria.','Excluir'))return;
   const up={['servers/'+sid+'/cats/'+k]:null};
   for(const [id,ch] of Object.entries(lastChs))if(ch.cat===k){up['channels/'+sid+'/'+id+'/cat']=null;up['channels/'+sid+'/'+id+'/sync']=null}
   try{await update(ref(db),up);closeModal()}catch{toast('Não foi possível excluir a categoria.')}
@@ -1809,7 +1820,7 @@ function permView(sid,kind,id,roleSel){
   };
   d.querySelector('#pvDel').onclick=async()=>{
     if(kind==='cat'){closeModal();return delCat(sid,id)}
-    if(!confirm('Excluir #'+obj.name+'?'))return;
+    if(!await ask('Excluir #'+obj.name+'?','Excluir'))return;
     try{await set(ref(db,path),null);closeModal()}catch{toast('Não foi possível excluir o canal.')}
   };
   const sel=d.querySelector('#pvRole');
@@ -1836,7 +1847,7 @@ function permView(sid,kind,id,roleSel){
 }
 async function delServer(sid){
   const m=srvMeta[sid];if(!m||m.owner!==me.uid)return;
-  if(!confirm('Excluir "'+m.name+'"? O servidor some para todos e isso não pode ser desfeito.'))return;
+  if(!await ask('Excluir "'+m.name+'"? O servidor some para todos e isso não pode ser desfeito.','Excluir'))return;
   try{await update(ref(db),{['servers/'+sid]:null,['channels/'+sid]:null,['userServers/'+me.uid+'/'+sid]:null});closeSettings()}
   catch{toast('Não foi possível excluir o servidor.')}
 }
