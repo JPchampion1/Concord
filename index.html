@@ -455,6 +455,23 @@ body[data-theme="black"]{--bg1:#000;--bg2:#0b0b0c;--bg3:#111113;--hov:#1b1b1e;--
 .sbar{position:sticky;bottom:0;display:none;align-items:center;gap:8px;margin-top:24px;padding:10px 12px;border-radius:8px;background:var(--bg1);box-shadow:0 4px 16px rgba(0,0,0,.5)}
 .sbar.on{display:flex}.sbar span{flex:1;font-size:14px}
 @media(max-width:900px){.sp{grid-template-columns:1fr}.pv{position:static;order:-1}.trs{grid-template-columns:1fr 1fr}}
+
+/* ---------- reações ---------- */
+.mt .qr{font-size:17px;line-height:1}
+.rxs{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}.rxs:empty{display:none}
+.rxs button{display:flex;align-items:center;gap:5px;height:26px;padding:0 8px;border-radius:8px;background:var(--bg2);border:1px solid transparent;font-size:15px}
+.rxs button b{font-size:13px;font-weight:600;color:var(--mut)}
+.rxs button:hover{border-color:#6d6f78}
+.rxs button.on{background:rgba(116,204,32,.18);border-color:var(--brand)}.rxs button.on b{color:var(--txt)}
+#rxPop{position:fixed;z-index:30;display:none;flex-direction:column;height:340px;border-radius:8px;background:var(--bg1);box-shadow:0 8px 24px rgba(0,0,0,.5)}
+#rxPop.on{display:flex}
+#rxPop .rs{padding:8px}
+#rxPop .rs input{width:100%;height:34px;padding:0 12px;border:0;border-radius:6px;background:#383a40;color:var(--txt)}
+#rxPop .rg{flex:1;overflow-y:auto;padding:0 8px 8px}
+#rxPop h5{margin:8px 0 4px;font-size:12px;text-transform:uppercase;color:var(--mut)}
+#rxPop .rb{display:flex;flex-wrap:wrap}
+#rxPop .rb button{width:36px;height:36px;border-radius:6px;background:none;font-size:22px;display:grid;place-items:center}
+#rxPop .rb button:hover{background:var(--hov)}
 </style>
 </head>
 <body>
@@ -1138,7 +1155,12 @@ function addMsg(m,quiet){
   const [tx,inv]=richText(m.text||'');if(m.text){mentify(tx,m);bd.append(tx);tw(tx);if(onlyEmoji(m.text))tx.classList.add('jumbo')}if(inv)bd.append(inviteCard(inv));if(m.img)bd.append(picBox(m));if(m.gif)bd.append(gifBox(m));if(m.poll)bd.append(pollBox(m));if(m.aud)bd.append(audBox(m));
   row.append(bd);
   if(m.id){
-    const tb=el('div','mt'),rb=ib('','reply');rb.title='Responder';rb.onclick=e=>{e.stopPropagation();setReply(m)};tb.append(rb);
+    const tb=el('div','mt'),rb=ib('','reply');rb.title='Responder';rb.onclick=e=>{e.stopPropagation();setReply(m)};for(const e of [...QR,rxRand(m.id)]){const q=el('button','qr',e);q.type='button';q.title='Reagir com '+e;q.onclick=ev=>{ev.stopPropagation();toggleRx(m,e)};tb.append(q)}
+    const ab=ib('','smile');ab.title='Adicionar reação';ab.onclick=ev=>{ev.stopPropagation();rxPicker(ab,m)};tb.append(ab);
+    tb.append(rb);
+    const rx=el('div','rxs');bd.append(rx);
+    const drawRx=mm=>{rx.innerHTML='';for(const [e,u] of Object.entries(mm.reactions||{})){const n=Object.keys(u||{}).length;if(!n)continue;const b=el('button',u[me.uid]?'on':'');b.type='button';b.append(document.createTextNode(e),el('b','',String(n)));b.onclick=ev=>{ev.stopPropagation();toggleRx(m,e)};rx.append(b)}};
+    rxRefresh[m.id]=drawRx;drawRx(m);
     if(m.uid===me.uid||(ownerUid&&ownerUid===me.uid)){const db_=ib('del','trash');db_.title='Excluir';db_.onclick=e=>{e.stopPropagation();delMsg(m)};tb.append(db_)}
     row.append(tb);
     row.onclick=e=>{if(!matchMedia('(pointer:coarse)').matches||e.target.closest('a,button,.pic,.gifmsg,.aud,.poll,.mention,.lk,.inv,.rp'))return;document.querySelectorAll('.m.sel').forEach(x=>x!==row&&x.classList.remove('sel'));row.classList.toggle('sel')};
@@ -1221,7 +1243,40 @@ document.addEventListener('mousedown',e=>{if(!e.target.closest('#plusMenu,#attac
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closePlus()});
 
 /* ---------- Enquetes ---------- */
-const pollRefresh={};
+const pollRefresh={},rxRefresh={};
+/* ---------- Reações ---------- */
+const QR=['❤️','👍'];
+const RQ=['😂','😮','😢','🔥','🎉','😍','🤔','👏','🙏','💀','🥳','😎'];
+const rxRand=id=>{let h=0;for(const c of String(id))h=(h*31+c.charCodeAt(0))>>>0;return RQ[h%RQ.length]}; // 3ª sugestão varia por mensagem
+function toggleRx(m,e){
+  const cm=msgList.find(x=>x.id===m.id)||m,on=!!((cm.reactions||{})[e]||{})[me.uid];
+  set(ref(db,msgPath()+'/'+m.id+'/reactions/'+e+'/'+me.uid),on?null:true).catch(()=>toast('Não foi possível reagir.'));
+}
+const rxPop=document.createElement('div');rxPop.id='rxPop';document.body.append(rxPop);
+let rxBuilt=false;
+const closeRx=()=>rxPop.classList.remove('on');
+function filterRx(v){
+  rxPop.querySelectorAll('.rb button').forEach(b=>b.style.display=!v||b.dataset.k.includes(v)?'':'none');
+  rxPop.querySelectorAll('h5').forEach(h=>{h.style.display=[...h.nextElementSibling.children].some(b=>b.style.display!=='none')?'':'none'});
+}
+function buildRx(){
+  rxPop.innerHTML='<div class="rs"><input type="search" placeholder="Buscar emoji" autocomplete="off"></div><div class="rg"></div>';
+  const g=rxPop.querySelector('.rg');
+  EMO.forEach(([n,list])=>{const h=el('h5','',n),b=el('div','rb');list.forEach(([e,nm,kw])=>{const x=el('button','',e);x.type='button';x.dataset.e=e;x.dataset.k=norm(nm+' '+kw);b.append(x)});g.append(h,b)});
+  g.onclick=ev=>{const b=ev.target.closest('button');if(!b||!rxPop.msg)return;toggleRx(rxPop.msg,b.dataset.e);closeRx()};
+  rxPop.querySelector('input').oninput=ev=>filterRx(norm(ev.target.value.trim()));
+}
+function rxPicker(anchor,m){
+  if(rxPop.classList.contains('on')&&rxPop.msg&&rxPop.msg.id===m.id)return closeRx();
+  if(!rxBuilt){buildRx();rxBuilt=true}
+  rxPop.msg=m;const q=rxPop.querySelector('input');q.value='';filterRx('');
+  const r=anchor.getBoundingClientRect(),w=Math.min(320,innerWidth-16);
+  let top=r.bottom+6;if(top+340>innerHeight)top=Math.max(8,r.top-346);
+  Object.assign(rxPop.style,{width:w+'px',left:Math.min(Math.max(8,r.right-w),innerWidth-w-8)+'px',top:top+'px'});
+  rxPop.classList.add('on');rxPop.querySelector('.rg').scrollTop=0;if(!isMob())q.focus();
+}
+document.addEventListener('mousedown',e=>{if(!e.target.closest('#rxPop,.mt'))closeRx()});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeRx()});
 const fmtEnd=t=>{const d=t-Date.now();if(d<=0)return'';const m=Math.round(d/60000);if(m<60)return'em '+Math.max(m,1)+' min';const h=Math.round(m/60);return h<48?'em '+h+' h':'em '+Math.round(h/24)+' dias'};
 function pollBox(m){
   const p=m.poll,box=el('div','poll'),sub=el('small'),list=el('div'),foot=el('div','pll');
@@ -1808,7 +1863,7 @@ function listenMsgs(q){
     else addMsg(m);
   });
   const b=onChildRemoved(q,s=>{msgList=msgList.filter(x=>x.id!==s.key);redraw()});
-  const c=onChildChanged(q,s=>{const m={...s.val(),id:s.key},i=msgList.findIndex(x=>x.id===m.id);if(i>=0){msgList[i]=m;if(pollRefresh[m.id])pollRefresh[m.id](m)}}); // votos em tempo real
+  const c=onChildChanged(q,s=>{const m={...s.val(),id:s.key},i=msgList.findIndex(x=>x.id===m.id);if(i>=0){msgList[i]=m;if(pollRefresh[m.id])pollRefresh[m.id](m);if(rxRefresh[m.id])rxRefresh[m.id](m)}}); // votos em tempo real
   return()=>{a();b();c()};
 }
 function redraw(){
