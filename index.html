@@ -484,6 +484,11 @@ body[data-theme="black"]{--bg1:#000;--bg2:#0b0b0c;--bg3:#111113;--hov:#1b1b1e;--
 .kh:hover .cadd{opacity:1}.kh .cadd .i{width:14px;height:14px}
 @media(pointer:coarse){.kh .cadd{opacity:1}}
 #chans,#chans *{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.ch .cog,.kh .cog{display:grid;place-items:center;flex:none;width:22px;height:22px;margin-left:auto;border-radius:4px;color:var(--mut);opacity:0}
+.kh .cog{margin-left:0}
+.ch:hover .cog,.ch.on .cog,.kh:hover .cog{opacity:1}.cog:hover{color:var(--txt)}
+.cog .i{width:16px;height:16px}
+@media(pointer:coarse){.ch .cog,.kh .cog{opacity:.8}}
 .dragging{opacity:.4}.dt{box-shadow:0 -2px 0 var(--brand)}.db{box-shadow:0 2px 0 var(--brand)}.di{background:rgba(116,204,32,.2)}
 .ghost{position:fixed;z-index:50;pointer-events:none;background:var(--bg2);border-radius:4px;box-shadow:0 4px 12px rgba(0,0,0,.5);opacity:.95}
 body.dnd{cursor:grabbing}
@@ -499,6 +504,24 @@ body.dnd{cursor:grabbing}
 .tri button{width:34px;height:34px;border-radius:6px;background:var(--bg1);color:var(--mut);font-weight:700}
 .tri button:disabled{opacity:.4}
 .tri .deny.on{background:var(--err);color:#fff}.tri .allow.on{background:var(--brand);color:#0b1a02}.tri .none.on{background:#4e5058;color:#fff}
+
+.rg2{display:grid;grid-template-columns:220px minmax(0,1fr);gap:32px;align-items:start}
+.rls{display:flex;flex-direction:column;gap:2px}
+.rlh{display:flex;align-items:center;justify-content:space-between;padding:0 8px 8px}
+.rlh button{width:28px;height:28px;display:grid;place-items:center;border-radius:4px;background:none;color:var(--mut)}.rlh button:hover{color:var(--txt)}.rlh .i{width:18px;height:18px}
+.rli{display:flex;align-items:center;gap:10px;padding:8px;border-radius:4px;text-align:left;background:none}
+.rli:hover{background:var(--hov)}.rli.on{background:var(--bg2)}
+.rli i{flex:none;width:12px;height:12px;border-radius:50%}.rli span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.stabs{display:flex;gap:24px;margin:16px 0 24px;border-bottom:1px solid #3f4147;overflow-x:auto}
+.stabs button{flex:none;padding:0 0 10px;font-weight:600;color:var(--mut);border-bottom:2px solid transparent}
+.stabs button.on{color:var(--txt);border-color:var(--brand)}
+.rg2 h4{margin:20px 0 8px;font-size:15px}.rg2 h2{margin:0;font-size:20px}
+.cpick{display:flex;gap:12px;align-items:flex-start;margin-top:12px;flex-wrap:wrap}
+.cbox{position:relative;display:grid;place-items:center;flex:none;width:84px;height:84px;border-radius:6px;border:2px solid transparent;color:#fff;font-weight:700;cursor:pointer}
+.cbox.on{border-color:#fff}.cbox input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.pgrid{display:grid;grid-template-columns:repeat(10,28px);gap:8px}
+.pgrid button{width:28px;height:28px;border-radius:50%;border:2px solid transparent}.pgrid button.on{border-color:#fff}
+@media(max-width:900px){.rg2{grid-template-columns:1fr}.rls{flex-direction:row;flex-wrap:wrap}.rlh{width:100%}.pgrid{grid-template-columns:repeat(5,28px)}}
 </style>
 </head>
 <body>
@@ -761,7 +784,7 @@ function syncSrv(list){
     srvMeta[id]=sn.val();drawServers(srvList);if(cur.sid===id){srvHead();refreshChans()}
   });
 }
-function srvHead(){const m=srvMeta[cur.sid];if(!m)return;$('sTitle').textContent=m.name;$('srvSet').classList.toggle('hidden',!(m.owner===me.uid||permIn(cur.sid,me.uid,'manage_roles')||permIn(cur.sid,me.uid,'manage_channels')))}
+function srvHead(){const m=srvMeta[cur.sid];if(!m)return;$('sTitle').textContent=m.name;$('srvSet').classList.toggle('hidden',!(m.owner===me.uid||permIn(cur.sid,me.uid,'manage_roles')))}
 function paintSrv(b,sid,nm){
   const m=srvMeta[sid]||{};b.textContent=nm.slice(0,2).toUpperCase();b.style.backgroundImage='';
   if(m.icon)loadImg(m.icon).then(u=>{if(u&&b.isConnected){b.style.backgroundImage='url("'+u+'")';b.textContent=''}}).catch(()=>{});
@@ -1112,12 +1135,13 @@ function drawChannels(chs){
   if(mc){const bt=el('div','cb'),ac=ib('','folder'),add=ib('','plus');ac.title='Criar categoria';ac.onclick=catView;add.title='Criar canal';add.onclick=()=>channelView('');bt.append(ac,add);h.append(bt)}
   box.append(h);
   const vis=id=>mc||permIn(sid,me.uid,'view',lastChs[id]);
-  const row=id=>{const c=lastChs[id],b=el('button','ch'+(id===cur.cid?' on':''));b.dataset.cid=id;b.append(el('i','','#'),document.createTextNode(c.name));b.onclick=()=>pickChannel(id,c.name);return b};
+  const cog=(kind,id)=>{const g=el('span','cog');g.innerHTML=ic('settings');g.title=kind==='cat'?'Editar categoria':'Editar canal';g.onclick=e=>{e.stopPropagation();permView(sid,kind,id)};return g};
+  const row=id=>{const c=lastChs[id],b=el('button','ch'+(id===cur.cid?' on':''));b.dataset.cid=id;b.append(el('i','','#'),document.createTextNode(c.name));if(mc)b.append(cog('ch',id));b.onclick=()=>pickChannel(id,c.name);return b};
   const g0=el('div','kg');g0.dataset.cat='';L[''].filter(vis).forEach(id=>g0.append(row(id)));box.append(g0);
   for(const k of order){
     const ids=L[k].filter(vis);if(!ids.length&&!mc)continue;
     const hd=el('div','kh'+(colCats.has(k)?' col':''));hd.dataset.cat=k;hd.append(el('i','','▾'),el('span','',cats[k].name||'Categoria'));
-    if(mc){const a=ib('cadd','plus');a.title='Criar canal nesta categoria';a.onclick=e=>{e.stopPropagation();channelView(k)};hd.append(a)}
+    if(mc){const a=ib('cadd','plus');a.title='Criar canal nesta categoria';a.onclick=e=>{e.stopPropagation();channelView(k)};hd.append(a,cog('cat',k))}
     hd.onclick=()=>{colCats.has(k)?colCats.delete(k):colCats.add(k);drawChannels(lastChs)};
     box.append(hd);
     if(!colCats.has(k)){const g=el('div','kg');g.dataset.cat=k;ids.forEach(id=>g.append(row(id)));box.append(g)}
@@ -1602,7 +1626,7 @@ function dndEnd(commit){
 }
 chansEl.addEventListener('pointerdown',e=>{
   if(!permIn(cur.sid,me.uid,'manage_channels')||(e.pointerType==='mouse'&&e.button!==0))return;
-  const t=e.target.closest('.ch[data-cid],.kh[data-cat]');if(!t||e.target.closest('.cadd'))return;
+  const t=e.target.closest('.ch[data-cid],.kh[data-cat]');if(!t||e.target.closest('.cadd,.cog'))return;
   dnd={t,x:e.clientX,y:e.clientY,on:false,touch:e.pointerType!=='mouse',drop:null};
   if(dnd.touch)dnd.timer=setTimeout(()=>{if(dnd&&!dnd.on){dndBegin();if(navigator.vibrate)navigator.vibrate(15)}},350); // segurar para arrastrar no celular
 });
@@ -1625,11 +1649,11 @@ chansEl.addEventListener('contextmenu',e=>{if(dnd)e.preventDefault()});
 chansEl.addEventListener('click',e=>{if(suppress){e.stopPropagation();e.preventDefault()}},true);
 
 /* ---------- Configurações do servidor: abas ---------- */
-function openServerSettings(sid,tab,sel){
+function openServerSettings(sid,tab,sel,sub){
   const m=srvMeta[sid];if(!m)return;
-  const own=m.owner===me.uid,mr=permIn(sid,me.uid,'manage_roles'),mc=permIn(sid,me.uid,'manage_channels');
-  if(!own&&!mr&&!mc)return;
-  const tabs=[...(own?[['perfil','Perfil do servidor'],['convites','Convites']]:[]),...(mr?[['cargos','Cargos']]:[]),...(mc?[['canais','Canais e categorias']]:[])];
+  const own=m.owner===me.uid,mr=permIn(sid,me.uid,'manage_roles');
+  if(!own&&!mr)return;
+  const tabs=[...(own?[['perfil','Perfil do servidor'],['convites','Convites']]:[]),...(mr?[['cargos','Cargos']]:[])];
   if(!tabs.some(t=>t[0]===tab))tab=tabs[0][0];
   S.classList.remove('hidden');S.innerHTML='';
   const nav=el('nav'),sec=el('section'),c=el('div','sc wide'),x=ib('sx','x');x.setAttribute('aria-label','Fechar');x.onclick=closeSettings;
@@ -1638,64 +1662,63 @@ function openServerSettings(sid,tab,sel){
   if(own)nav.append(btn('Excluir servidor',()=>delServer(sid),'sn red'));
   sec.append(c);S.append(nav,sec,x);
   if(tab==='convites'){c.append(el('h1','','Convites'),sRow('Link de convite',linkOf(sid),btn('Copiar',()=>navigator.clipboard.writeText(linkOf(sid)).then(()=>toast('Link copiado.')).catch(()=>toast('Copie manualmente: '+linkOf(sid))),'pri')))}
-  else if(tab==='cargos')srvRoles(c,sid,sel);
-  else if(tab==='canais')srvChans(c,sid);
+  else if(tab==='cargos')srvRoles(c,sid,sel,sub);
   else srvProfile(c,sid);
 }
-const PAL=['#e74c3c','#e67e22','#f1c40f','#2ecc71','#1abc9c','#3498db','#9b59b6','#e91e63','#95a5a6','#ffffff'];
-function srvRoles(c,sid,sel){
+const PAL=['#1abc9c','#2ecc71','#3498db','#9b59b6','#e91e63','#f1c40f','#e67e22','#e74c3c','#95a5a6','#607d8b','#11806a','#1f8b4c','#206694','#71368a','#ad1457','#c27c0e','#a84300','#992d22','#979c9f','#546e7a'];
+function srvRoles(c,sid,sel,sub){
   const R=rolesOf(sid),ids=['everyone',...rolePos(R)];sel=R[sel]?sel:'everyone';
-  const base='servers/'+sid+'/roles/'+sel,r=R[sel],again=()=>openServerSettings(sid,'cargos',sel);
-  c.append(el('h1','','Cargos'));
-  const bar=el('div','rl');
-  ids.forEach(id=>{const b=el('button','rlb'+(id===sel?' on':'')),dot=el('i');dot.style.background=R[id].color||'#99aab5';b.append(dot,document.createTextNode(R[id].name||'cargo'));b.onclick=()=>openServerSettings(sid,'cargos',id);bar.append(b)});
-  c.append(bar,btn('Criar cargo',async()=>{
+  const r=R[sel],base='servers/'+sid+'/roles/'+sel,ev=sel==='everyone';
+  const members=Object.entries((srvMeta[sid]||{}).members||{}),count=members.filter(([,u])=>(u.roles||{})[sel]).length;
+  const tabs=ev?[['perm','Permissões']]:[['exib','Exibição'],['perm','Permissões'],['mem','Gerenciar membros ('+count+')']];
+  if(!tabs.some(t=>t[0]===sub))sub=tabs[0][0];
+  const again=()=>openServerSettings(sid,'cargos',sel,sub),fail=()=>toast('Não foi possível salvar.');
+  const wrap=el('div','rg2'),side=el('div','rls'),main=el('div');
+  const hd=el('div','rlh'),add=ib('','plus');hd.append(el('b','','Cargos'));add.title='Criar cargo';
+  add.onclick=async()=>{
     const k=push(ref(db,'servers/'+sid+'/roles')).key;
-    try{await set(ref(db,'servers/'+sid+'/roles/'+k),{name:'Novo cargo',color:PAL[5],perms:{view:false}});openServerSettings(sid,'cargos',k)}catch{toast('Não foi possível criar o cargo.')}
-  },'pri'));
-  if(sel!=='everyone'){
-    c.append(el('h3','','Nome do cargo'));
+    try{await set(ref(db,'servers/'+sid+'/roles/'+k),{name:'Novo cargo',color:'',perms:{view:false}});openServerSettings(sid,'cargos',k,'exib')}catch{toast('Não foi possível criar o cargo.')}
+  };
+  hd.append(add);side.append(hd);
+  ids.forEach(id=>{const b=el('button','rli'+(id===sel?' on':'')),dot=el('i');dot.style.background=R[id].color||'#99aab5';b.append(dot,el('span','',R[id].name||'cargo'));b.onclick=()=>openServerSettings(sid,'cargos',id,sub);side.append(b)});
+  main.append(el('h2','','Editar cargo - '+(r.name||'cargo')));
+  const bar=el('div','stabs');tabs.forEach(([k,n])=>{const b=el('button',k===sub?'on':'',n);b.type='button';b.onclick=()=>openServerSettings(sid,'cargos',sel,k);bar.append(b)});main.append(bar);
+  if(sub==='exib'){
+    main.append(el('h4','','Nome do cargo *'));
     const nm=el('input','nm');nm.maxLength=32;nm.value=r.name||'';
-    nm.onchange=()=>{const v=nm.value.trim();if(v)set(ref(db,base+'/name'),v.slice(0,32)).then(again).catch(()=>toast('Não foi possível salvar.'))};
-    c.append(nm,el('h3','','Cor'));
-    const pal=el('div','pal');PAL.forEach(col=>{const b=el('button',col===r.color?'on':'');b.type='button';b.style.background=col;b.onclick=()=>set(ref(db,base+'/color'),col).then(again).catch(()=>toast('Não foi possível salvar.'));pal.append(b)});
-    c.append(pal);
-  }else c.append(el('div','sub','Permissões padrão de todos os membros do servidor.'));
-  c.append(el('h3','','Permissões'));
-  for(const k of Object.keys(PERMS)){
-    c.append(sRow(PERMS[k],'',sw(!!(r.perms||{})[k],v=>{
-      const p={};Object.keys(PERMS).forEach(x=>{p[x]=x===k?v:!!(r.perms||{})[x]});
-      set(ref(db,base+'/perms'),p).then(again).catch(()=>toast('Não foi possível salvar.'));
-    })));
-  }
-  if(sel!=='everyone'){
-    c.append(el('h3','','Membros com este cargo'));
-    Object.entries((srvMeta[sid]||{}).members||{}).sort((a,b)=>String(a[1].name).localeCompare(String(b[1].name))).forEach(([uid,u])=>{
-      const has=!!((u.roles||{})[sel]);
-      c.append(sRow(u.name||'?','',sw(has,v=>set(ref(db,'servers/'+sid+'/members/'+uid+'/roles/'+sel),v?true:null).catch(()=>toast('Não foi possível salvar.')))));
-    });
+    nm.onchange=()=>{const v=nm.value.trim();if(v)set(ref(db,base+'/name'),v.slice(0,32)).then(again).catch(fail)};
+    main.append(nm,el('h4','','Cor do cargo *'),el('div','sub','O nome do membro aparece com a cor do primeiro cargo colorido que ele tem.'));
+    const row=el('div','cpick'),cur_=(r.color||'').toLowerCase(),custom=!!cur_&&!PAL.includes(cur_);
+    const def=el('button','cbox'+(!cur_?' on':''),!cur_?'✓':'');def.type='button';def.title='Sem cor';def.style.background='#99aab5';def.onclick=()=>set(ref(db,base+'/color'),'').then(again).catch(fail);
+    const cb=el('label','cbox'+(custom?' on':''),custom?'✓ ✎':'✎'),ci=document.createElement('input');
+    ci.type='color';ci.value=/^#[0-9a-f]{6}$/i.test(cur_)?cur_:'#ff6a00';cb.style.background=custom?cur_:'#4e5058';cb.title='Cor personalizada';
+    ci.onchange=()=>set(ref(db,base+'/color'),ci.value).then(again).catch(fail);cb.append(ci);
+    const grid=el('div','pgrid');PAL.forEach(col=>{const b=el('button',col===cur_?'on':'');b.type='button';b.style.background=col;b.onclick=()=>set(ref(db,base+'/color'),col).then(again).catch(fail);grid.append(b)});
+    row.append(def,cb,grid);main.append(row);
     const del=btn('Excluir cargo',async()=>{
       if(!confirm('Excluir o cargo "'+r.name+'"?'))return;
       try{await update(ref(db),{[base]:null});openServerSettings(sid,'cargos')}catch{toast('Não foi possível excluir o cargo.')}
-    },'sec');del.style.color='var(--err)';del.style.marginTop='24px';c.append(del);
+    },'sec');del.style.color='var(--err)';del.style.marginTop='32px';main.append(del);
+  }else if(sub==='perm'){
+    if(ev)main.append(el('div','sub','Permissões padrão de todos os membros do servidor.'));
+    for(const k of Object.keys(PERMS)){
+      main.append(sRow(PERMS[k],'',sw(!!(r.perms||{})[k],v=>{
+        const p={};Object.keys(PERMS).forEach(x=>{p[x]=x===k?v:!!(r.perms||{})[x]});
+        set(ref(db,base+'/perms'),p).catch(fail);
+      })));
+    }
+  }else{
+    members.sort((a,b)=>String(a[1].name).localeCompare(String(b[1].name))).forEach(([uid,u])=>{
+      main.append(sRow(u.name||'?','',sw(!!(u.roles||{})[sel],v=>set(ref(db,'servers/'+sid+'/members/'+uid+'/roles/'+sel),v?true:null).then(again).catch(fail))));
+    });
   }
-}
-function srvChans(c,sid){
-  const cats=(srvMeta[sid]||{}).cats||{},{L,order}=layoutOf(lastChs,cats);
-  c.append(el('h1','','Canais e categorias'),el('div','sub','Para reorganizar, arraste os canais e categorias na barra lateral (no celular, segure e arraste). Aqui você edita as permissões.'),btn('Criar categoria',catView,'pri'));
-  const row=(label,ind,sub,onPerm,onDel)=>{
-    const r=el('div','sr'+(ind?' ind':'')),l=el('div','lbl');l.append(el('b','',label));if(sub)l.append(el('small','',sub));
-    r.append(l,btn('Permissões',onPerm,'sec'));if(onDel)r.append(btn('Excluir',onDel,'sec'));return r;
-  };
-  const chRow=(id,ind)=>row('# '+lastChs[id].name,ind,ind?(lastChs[id].sync===false?'Permissões próprias':'Sincronizado com a categoria'):'',()=>permView(sid,'ch',id));
-  L[''].forEach(id=>c.append(chRow(id,false)));
-  order.forEach(k=>{c.append(row(cats[k].name||'Categoria',false,'Categoria',()=>permView(sid,'cat',k),()=>delCat(sid,k)));L[k].forEach(id=>c.append(chRow(id,true)))});
+  wrap.append(side,main);c.append(wrap);
 }
 async function delCat(sid,k){
   const cats=(srvMeta[sid]||{}).cats||{};if(!cats[k]||!confirm('Excluir a categoria "'+cats[k].name+'"? Os canais dela ficam sem categoria.'))return;
   const up={['servers/'+sid+'/cats/'+k]:null};
   for(const [id,ch] of Object.entries(lastChs))if(ch.cat===k){up['channels/'+sid+'/'+id+'/cat']=null;up['channels/'+sid+'/'+id+'/sync']=null}
-  try{await update(ref(db),up);openServerSettings(sid,'canais')}catch{toast('Não foi possível excluir a categoria.')}
+  try{await update(ref(db),up);closeModal()}catch{toast('Não foi possível excluir a categoria.')}
 }
 function catView(){
   const d=view(`<div class="pad"><h2>Criar categoria</h2><p>Categorias agrupam canais e dividem as permissões com eles.</p>
@@ -1704,7 +1727,7 @@ function catView(){
   const inp=d.querySelector('#mIn');
   const go=async()=>{
     const name=inp.value.trim();if(!name)return say(d,'Dê um nome à categoria.');
-    try{await set(push(ref(db,'servers/'+cur.sid+'/cats')),{name:name.slice(0,32),pos:Object.keys((srvMeta[cur.sid]||{}).cats||{}).length});closeModal();if(!S.classList.contains('hidden'))openServerSettings(cur.sid,'canais')}
+    try{await set(push(ref(db,'servers/'+cur.sid+'/cats')),{name:name.slice(0,32),pos:Object.keys((srvMeta[cur.sid]||{}).cats||{}).length});closeModal()}
     catch{say(d,'Não foi possível criar a categoria.')}
   };
   d.querySelector('#mBack').onclick=closeModal;d.querySelector('#mOk').onclick=go;enter(inp,go);showModal(d);
@@ -1714,8 +1737,18 @@ function permView(sid,kind,id,roleSel){
   const R=rolesOf(sid),rids=['everyone',...rolePos(R)];roleSel=R[roleSel]?roleSel:'everyone';
   const path=kind==='cat'?'servers/'+sid+'/cats/'+id:'channels/'+sid+'/'+id;
   const hasCat=kind==='ch'&&obj.cat&&cats[obj.cat],synced=!!hasCat&&obj.sync!==false,ow=effOw(sid,obj);
-  const d=view(`<div class="pad"><h2></h2><div id="pvSync"></div><label class="lb" for="pvRole">Cargo</label><select id="pvRole"></select><div id="pvRows"></div></div><div class="foot2"><button class="b2 pri" id="pvOk">Concluído</button></div>`);
-  d.querySelector('h2').textContent='Permissões de '+(kind==='cat'?obj.name:'#'+obj.name);
+  const d=view(`<div class="pad"><h2></h2><label class="lb" for="pvName">Nome</label><input id="pvName" maxlength="32" autocomplete="off"><h3 style="margin:20px 0 4px;font-size:14px">Permissões</h3><div id="pvSync"></div><label class="lb" for="pvRole">Cargo</label><select id="pvRole"></select><div id="pvRows"></div></div><div class="foot2"><button class="b2 lnk" id="pvDel" style="color:var(--err)">Excluir</button><button class="b2 pri" id="pvOk">Concluído</button></div>`);
+  d.querySelector('h2').textContent=kind==='cat'?'Editar categoria':'Editar canal';
+  const nmI=d.querySelector('#pvName');nmI.value=obj.name||'';
+  nmI.onchange=async()=>{
+    let v=nmI.value.trim();if(kind==='ch')v=v.toLowerCase().replace(/\s+/g,'-');if(!v){nmI.value=obj.name||'';return}
+    try{await update(ref(db,path),{name:v.slice(0,32)});permView(sid,kind,id,roleSel)}catch{toast('Não foi possível renomear.')}
+  };
+  d.querySelector('#pvDel').onclick=async()=>{
+    if(kind==='cat'){closeModal();return delCat(sid,id)}
+    if(!confirm('Excluir #'+obj.name+'?'))return;
+    try{await set(ref(db,path),null);closeModal()}catch{toast('Não foi possível excluir o canal.')}
+  };
   const sel=d.querySelector('#pvRole');
   rids.forEach(r=>{const o=document.createElement('option');o.value=r;o.textContent=R[r].name||'cargo';o.selected=r===roleSel;sel.append(o)});
   sel.onchange=()=>permView(sid,kind,id,sel.value);
