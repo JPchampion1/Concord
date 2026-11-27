@@ -854,6 +854,20 @@ function showModal(node){
 }
 let lockModal=false;
 function closeModal(){lockModal=false;ov.classList.add('hidden');ov.innerHTML=''}
+// confirmação que só libera depois de digitar o nome (ex.: excluir servidor)
+function askType(title,msg,word,okLabel){
+  return new Promise(res=>{
+    const d=view(`<div class="pad"><h2></h2><p></p><label class="lb" for="aTy">Digite o nome para confirmar</label><input id="aTy" autocomplete="off" spellcheck="false"></div><div class="foot2"><button class="b2 lnk" id="aNo">Cancelar</button><button class="b2 pri" id="aOk" disabled></button></div>`);
+    d.querySelector('h2').textContent=title;d.querySelector('p').textContent=msg;
+    const inp=d.querySelector('#aTy'),ok=d.querySelector('#aOk');
+    inp.placeholder=word;ok.textContent=okLabel||'Excluir';ok.style.background='var(--err)';ok.style.color='#fff';
+    const match=()=>inp.value.trim()===word.trim();
+    inp.oninput=()=>{ok.disabled=!match()};
+    const go=()=>{if(!match())return;closeModal();res(true)};
+    inp.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();go()}};
+    d.querySelector('#aNo').onclick=()=>{closeModal();res(false)};ok.onclick=go;showModal(d);
+  });
+}
 // confirmação própria do app (substitui o confirm() do navegador)
 function ask(msg,okLabel){
   return new Promise(res=>{
@@ -1863,7 +1877,7 @@ function permView(sid,kind,id,roleSel){
 }
 async function delServer(sid){
   const m=srvMeta[sid];if(!m||m.owner!==me.uid)return;
-  if(!await ask('Excluir "'+m.name+'"? O servidor some para todos e isso não pode ser desfeito.','Excluir'))return;
+  if(!await askType('Excluir servidor','O servidor "'+m.name+'" some para todos e isso não pode ser desfeito.',m.name,'Excluir servidor'))return;
   try{await update(ref(db),{['servers/'+sid]:null,['channels/'+sid]:null,['userServers/'+me.uid+'/'+sid]:null});closeSettings()}
   catch{toast('Não foi possível excluir o servidor.')}
 }
