@@ -638,7 +638,7 @@ body.dnd{cursor:grabbing}
 <script type="module">
 import {initializeApp} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
 import {getAuth,onAuthStateChanged,signInWithEmailAndPassword,createUserWithEmailAndPassword,updateProfile,signOut,sendPasswordResetEmail,reauthenticateWithCredential,EmailAuthProvider,updatePassword,verifyBeforeUpdateEmail} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
-import {getDatabase,ref,push,set,get,update,onValue,onChildAdded,onChildChanged,onChildRemoved,query,limitToLast,onDisconnect,remove} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js";
+import {getDatabase,ref,push,set,get,update,onValue,onChildAdded,onChildChanged,onChildRemoved,query,limitToLast,orderByChild,equalTo,onDisconnect,remove} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js";
 
 const app=initializeApp({
   apiKey:"AIzaSyBJsPaZOArWDvpzEz5sPCxBaJe_Yf7eoTg",
@@ -1823,12 +1823,42 @@ chansEl.addEventListener('touchmove',e=>{if(dnd&&dnd.on)e.preventDefault()},{pas
 chansEl.addEventListener('contextmenu',e=>{if(dnd)e.preventDefault()});
 chansEl.addEventListener('click',e=>{if(suppress){e.stopPropagation();e.preventDefault()}},true);
 
+/* ---------- Configurações do servidor: aba Convites ---------- */
+async function srvInvites(c,sid){
+  c.append(el('h1','','Convites'));
+  const box=el('div');c.append(box);box.append(el('div','uempty','Carregando…'));
+  let list;
+  try{const sn=await get(query(ref(db,'invites'),orderByChild('sid'),equalTo(sid)));list=Object.entries(sn.val()||{})}
+  catch{box.innerHTML='';return box.append(el('div','uempty','Não foi possível carregar os convites. Confira as regras do banco de dados (nó "invites").'))}
+  box.innerHTML='';
+  if(!list.length)return box.append(el('div','uempty','Nenhum convite criado ainda. Use o botão Convidar dentro do servidor.'));
+  list.sort((a,b)=>(b[1].ts||0)-(a[1].ts||0));
+  const m=srvMeta[sid]||{},R=rolesOf(sid),isOwner=m.owner===me.uid;
+  for(const [code,v] of list){
+    const link=linkOf(code),who=el('span','','…');
+    const memName=m.members&&m.members[v.by]&&m.members[v.by].name;
+    if(memName)who.textContent=memName;
+    else get(ref(db,'users/'+v.by+'/name')).then(x=>who.textContent=x.val()||'Ex-membro').catch(()=>who.textContent='Ex-membro');
+    const row=sRow(link,'');const small=row.querySelector('small');
+    small.append('Criado por ',who,' · '+(v.ts?new Date(v.ts).toLocaleDateString('pt-BR'):'—'));
+    const cn=v.cid&&cur.sid===sid&&lastChs[v.cid]?lastChs[v.cid].name:null;
+    small.append(' · '+(cn?'#'+cn:'qualquer canal'));
+    small.append(' · '+(v.role&&R[v.role]?'Cargo: '+(R[v.role].name||'Cargo'):'sem cargo'));
+    row.append(btn('Copiar',()=>navigator.clipboard.writeText(link).then(()=>toast('Link copiado.')).catch(()=>toast('Copie manualmente: '+link)),'pri'));
+    if(isOwner||v.by===me.uid)row.append(btn('Revogar',async()=>{
+      if(!await ask('Revogar este convite? O link deixará de funcionar.','Revogar'))return;
+      try{await remove(ref(db,'invites/'+code));row.remove();if(!box.children.length)box.append(el('div','uempty','Nenhum convite criado ainda.'))}
+      catch{toast('Não foi possível revogar o convite.')}
+    }));
+    box.append(row);
+  }
+}
 /* ---------- Configurações do servidor: abas ---------- */
 function openServerSettings(sid,tab,sel,sub){
   const m=srvMeta[sid];if(!m)return;
   const own=m.owner===me.uid,ms=own||permIn(sid,me.uid,'manage_server'),mr=permIn(sid,me.uid,'manage_roles');
   if(!ms&&!mr)return;
-  const tabs=[...(ms?[['perfil','Perfil do servidor']]:[]),...(mr?[['cargos','Cargos']]:[])];
+  const tabs=[...(ms?[['perfil','Perfil do servidor'],['convites','Convites']]:[]),...(mr?[['cargos','Cargos']]:[])];
   if(!tabs.some(t=>t[0]===tab))tab=tabs[0][0];
   S.classList.remove('hidden');S.innerHTML='';
   const nav=el('nav'),sec=el('section'),c=el('div','sc wide'),x=ib('sx','x');x.setAttribute('aria-label','Fechar');x.onclick=closeSettings;
@@ -1836,7 +1866,8 @@ function openServerSettings(sid,tab,sel,sub){
   tabs.forEach(([k,n])=>nav.append(btn(n,()=>openServerSettings(sid,k),'sn'+(k===tab?' on':''))));
   if(own)nav.append(btn('Excluir servidor',()=>delServer(sid),'sn red'));
   sec.append(c);S.append(nav,sec,x);
-  if(tab==='cargos')srvRoles(c,sid,sel,sub);
+  if(tab==='convites')srvInvites(c,sid);
+  else if(tab==='cargos')srvRoles(c,sid,sel,sub);
   else srvProfile(c,sid);
 }
 const PAL=['#1abc9c','#2ecc71','#3498db','#9b59b6','#e91e63','#f1c40f','#e67e22','#e74c3c','#95a5a6','#607d8b','#11806a','#1f8b4c','#206694','#71368a','#ad1457','#c27c0e','#a84300','#992d22','#979c9f','#546e7a'];
