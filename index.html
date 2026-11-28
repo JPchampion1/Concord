@@ -1839,7 +1839,7 @@ async function srvInvites(c,sid){
     const memName=m.members&&m.members[v.by]&&m.members[v.by].name;
     if(memName)who.textContent=memName;
     else get(ref(db,'users/'+v.by+'/name')).then(x=>who.textContent=x.val()||'Ex-membro').catch(()=>who.textContent='Ex-membro');
-    const row=sRow(link,'');const small=row.querySelector('small');
+    const row=sRow(link,'\u00a0');const small=row.querySelector('small');small.textContent='';
     small.append('Criado por ',who,' · '+(v.ts?new Date(v.ts).toLocaleDateString('pt-BR'):'—'));
     const cn=v.cid&&cur.sid===sid&&lastChs[v.cid]?lastChs[v.cid].name:null;
     small.append(' · '+(cn?'#'+cn:'qualquer canal'));
