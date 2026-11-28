@@ -130,6 +130,14 @@ button{cursor:pointer;border:0}
 .invi b{display:block;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .invi small{color:var(--mut)}
 .inv .b2:disabled{opacity:.5;cursor:default}
+.irow{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
+.irow.one{grid-template-columns:1fr}
+.ivl .urow{cursor:default}
+.ivl .urow .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ivl .urow .b2{height:32px;padding:0 14px;flex:none}
+.ivl .urow .b2.done{background:none;border:1px solid var(--brand);color:var(--brand)}
+.ivl .urow .b2:disabled{opacity:.6;cursor:default}
+.ivl .urow small{color:var(--mut);flex:none}
 /* ---------- MENSAGENS DIRETAS ---------- */
 .sv.home,.sv.home:hover,.sv.home.on{background:url(logo.png) center/cover}
 .sv.home{opacity:.85}
@@ -595,7 +603,7 @@ body.dnd{cursor:grabbing}
 <div id="app" class="hidden">
   <nav id="servers" aria-label="Servidores"></nav>
   <aside id="side">
-    <div id="sname"><span id="sTitle">Concord</span><button id="invite" class="hidden" title="Copiar código de convite">Convite</button><button id="srvSet" class="hidden" title="Configurações do servidor" aria-label="Configurações do servidor" data-ic="settings"></button></div>
+    <div id="sname"><span id="sTitle">Concord</span><button id="invite" class="hidden" title="Convidar pessoas">Convidar</button><button id="srvSet" class="hidden" title="Configurações do servidor" aria-label="Configurações do servidor" data-ic="settings"></button></div>
     <div id="chans"></div>
     <div id="me">
       <div class="av" id="meAv"><span class="dot"></span></div>
@@ -1076,16 +1084,83 @@ function channelView(cat){
   d.querySelector('#mBack').onclick=closeModal;d.querySelector('#mOk').onclick=go;enter(inp,go);
   showModal(d);
 }
-function inviteView(){
-  if(!permIn(cur.sid,me.uid,'invite'))return toast('Você não tem permissão para criar convites.');
-  const d=view(`<div class="pad"><h2>Convide seus amigos</h2><p>Envie este link para quem você quer chamar. Quando alguém colar no chat, aparece o convite com o botão Entrar.</p>
-    <label class="lb" for="mIn">Link de convite</label><div class="copy"><input id="mIn" readonly><button class="b2 pri" id="mCp">Copiar</button></div><div class="err"></div></div>`);
-  const inp=d.querySelector('#mIn'),link=linkOf(cur.sid);inp.value=link;
-  d.querySelector('#mCp').onclick=async e=>{
-    try{await navigator.clipboard.writeText(link);e.target.textContent='Copiado!'}
+async function inviteView(){
+  const sid=cur.sid;
+  if(!sid||!permIn(sid,me.uid,'invite'))return toast('Você não tem permissão para criar convites.');
+  const m=srvMeta[sid]||{},R=rolesOf(sid);
+  const canRole=m.owner===me.uid||permIn(sid,me.uid,'manage_roles');
+  const chs=Object.entries(lastChs).filter(([id,c])=>permIn(sid,me.uid,'view',c)).sort(byPos);
+  const d=view(`<div class="pad"><h2></h2><p>Escolha o canal de entrada${canRole?' e o cargo':''} e envie para seus amigos ou copie o link.</p>
+    <div class="irow${canRole?'':' one'}"><div><label class="lb" for="ivCh">Canal de entrada</label><select id="ivCh"></select></div>
+    <div id="ivRb"><label class="lb" for="ivRole">Cargo ao entrar</label><select id="ivRole"></select></div></div>
+    <label class="lb" for="ivQ">Enviar para</label><input id="ivQ" placeholder="Buscar amigos e conversas" autocomplete="off">
+    <div class="ulist ivl"></div>
+    <label class="lb" for="mIn" style="margin-top:16px">Ou copie o link</label>
+    <div class="copy"><input id="mIn" readonly placeholder="O link aparece aqui"><button class="b2 pri" id="mCp">Copiar link</button></div><div class="err"></div></div>`);
+  d.querySelector('h2').textContent='Convidar para '+(m.name||'o servidor');
+  const chSel=d.querySelector('#ivCh'),roleSel=d.querySelector('#ivRole'),inp=d.querySelector('#mIn'),cp=d.querySelector('#mCp'),list=d.querySelector('.ivl'),q=d.querySelector('#ivQ');
+  const opt=(v,t)=>{const o=el('option','',t);o.value=v;return o};
+  if(!chs.length)chSel.append(opt('','Primeiro canal disponível'));
+  chs.forEach(([id,c])=>chSel.append(opt(id,'# '+c.name)));
+  if(cur.cid&&chs.some(x=>x[0]===cur.cid))chSel.value=cur.cid;
+  if(canRole){roleSel.append(opt('','Nenhum cargo'));rolePos(R).forEach(id=>roleSel.append(opt(id,R[id].name||'Cargo')))}
+  else d.querySelector('#ivRb').remove();
+
+  // o convite só é criado no banco quando a pessoa copia ou envia; mudar canal/cargo gera um convite novo
+  let code=null,pending=null;
+  const reset=()=>{code=null;inp.value='';cp.textContent='Copiar link'};
+  chSel.onchange=reset;roleSel.onchange=reset;
+  const getCode=()=>{
+    if(code)return Promise.resolve(code);
+    if(pending)return pending;
+    const o={sid,by:me.uid,ts:Date.now()};
+    if(chSel.value)o.cid=chSel.value;
+    if(canRole&&roleSel.value)o.role=roleSel.value;
+    const k=push(ref(db,'invites')).key;
+    return pending=set(ref(db,'invites/'+k),o).then(()=>{code=k;return k}).finally(()=>{pending=null});
+  };
+  const noInvite=()=>say(d,'Não foi possível criar o convite. Confira as regras do banco de dados (nó "invites").');
+  cp.onclick=async()=>{
+    d.querySelector('.err').textContent='';
+    let c;try{c=await getCode()}catch{return noInvite()}
+    const link=linkOf(c);inp.value=link;
+    try{await navigator.clipboard.writeText(link);cp.textContent='Copiado!'}
     catch{inp.select();say(d,'Selecione e copie o link manualmente.')}
   };
+
+  const sendTo=async(t,b)=>{
+    d.querySelector('.err').textContent='';b.disabled=true;b.textContent='Enviando…';
+    let c;try{c=await getCode()}catch{b.disabled=false;b.textContent='Enviar';return noInvite()}
+    try{
+      const id=t.kind==='u'?(await ensureDm({uid:t.uid,name:t.name})).id:t.id;
+      await set(push(ref(db,'dmMessages/'+id)),{uid:me.uid,name:myName(),text:linkOf(c),ts:Date.now()});
+      b.textContent='Enviado';b.classList.add('done');
+    }catch{b.disabled=false;b.textContent='Tentar de novo'}
+  };
+
+  let targets=[];
+  const draw=()=>{
+    list.innerHTML='';const f=q.value.trim().toLowerCase();
+    const vis=targets.filter(t=>!f||t.name.toLowerCase().includes(f));
+    if(!vis.length)return list.append(el('div','uempty',targets.length?'Ninguém encontrado.':'Adicione amigos ou crie um grupo para enviar convites.'));
+    for(const t of vis){
+      const r=el('div','urow'),inSrv=t.kind==='u'&&members&&members[t.uid];
+      r.append(avatar(t.name,t.kind==='u'?t.uid:t.id),el('span','nm',t.name));
+      if(inSrv)r.append(el('small','','Já está no servidor'));
+      else{const b=el('button','b2 sec','Enviar');b.onclick=()=>sendTo(t,b);r.append(b)}
+      list.append(r);
+    }
+  };
+  q.oninput=draw;
+  list.append(el('div','uempty','Carregando…'));
   showModal(d);
+  let dms=dmList;try{dms=(await get(ref(db,'userDms/'+me.uid))).val()||dmList}catch{}
+  const ts=id=>(dms[id]||{}).ts||0;
+  targets=[
+    ...friendsArr().map(f=>{const id=[me.uid,f.uid].sort().join('_');return{kind:'u',uid:f.uid,name:f.name,id,ts:ts(id)}}),
+    ...Object.entries(dms).filter(([,x])=>x.group).map(([id,x])=>({kind:'g',id,name:x.name||'Grupo',ts:x.ts||0}))
+  ].sort((a,b)=>b.ts-a.ts||a.name.localeCompare(b.name));
+  draw();
 }
 
 /* ---------- Criar / entrar ---------- */
@@ -1098,11 +1173,19 @@ async function createServer(name){
   });
   closeModal();pickServer(sid,name);
 }
-async function joinServer(sid){
+async function joinServer(sid,inv={}){
   const s=await get(ref(db,'servers/'+sid+'/name'));
   if(!s.exists())throw 'nf';
   await update(ref(db),{['servers/'+sid+'/members/'+me.uid]:{name:myName()},['userServers/'+me.uid+'/'+sid]:{name:s.val()}});
-  closeModal();pickServer(sid,s.val());
+  let roleFail=false;
+  if(inv.role){ // o cargo do convite é aplicado depois da entrada; se falhar, a pessoa continua no servidor
+    try{
+      const r=await get(ref(db,'servers/'+sid+'/roles/'+inv.role+'/name'));
+      if(r.exists())await update(ref(db),{['servers/'+sid+'/members/'+me.uid+'/roles/'+inv.role]:true});
+    }catch{roleFail=true}
+  }
+  closeModal();pickServer(sid,s.val(),inv.cid);
+  if(roleFail)toast('Você entrou, mas o cargo do convite não pôde ser aplicado.');
 }
 $('invite').onclick=inviteView;
 /* ---------- Mensagens diretas ---------- */
@@ -1161,7 +1244,7 @@ function pickDm(id,d){
   un.msg=listenMsgs(query(ref(db,'dmMessages/'+id),limitToLast(100)));
 }
 function openDmView(id,d){if(!cur.home)goHome();pickDm(id,d)}
-async function openDm(u){
+async function ensureDm(u){
   const id=[me.uid,u.uid].sort().join('_'),ts=Date.now();
   let d=(await get(ref(db,'userDms/'+me.uid+'/'+id))).val();
   if(!d){
@@ -1172,8 +1255,9 @@ async function openDm(u){
       ['userDms/'+u.uid+'/'+id]:{group:false,name:myName(),peer:me.uid,ts}
     });
   }
-  closeModal();openDmView(id,d);
+  return {id,d};
 }
+async function openDm(u){const {id,d}=await ensureDm(u);closeModal();openDmView(id,d)}
 async function createGroup(name,people){
   const id=push(ref(db,'dms')).key,ts=Date.now(),mem={[me.uid]:{name:myName()}},up={};
   people.forEach(x=>mem[x.uid]={name:x.name});
@@ -1182,14 +1266,17 @@ async function createGroup(name,people){
   await update(ref(db),up);
   closeModal();openDmView(id,{group:true,name,ts});
 }
-function pickServer(sid,name){
-  if(cur.sid===sid&&un.ch)return;
+let pendCh=null;
+function pickServer(sid,name,cid){
+  if(cur.sid===sid&&un.ch){if(cid&&lastChs[cid])pickChannel(cid,lastChs[cid].name);return}
+  pendCh=cid||null;
   stop('ch');stop('mem');stop('msg');stop('dm');cur={sid,cid:null};lastChs={};
   $('sTitle').textContent=name;$('invite').classList.remove('hidden');srvHead();
   document.querySelectorAll('.sv').forEach(b=>b.classList.toggle('on',b.title===name));
   un.ch=onValue(ref(db,'channels/'+sid),s=>{
     const chs=s.val()||{};drawChannels(chs);
     const ok=id=>chs[id]&&(permIn(sid,me.uid,'view',chs[id])||permIn(sid,me.uid,'manage_channels'));
+    if(pendCh){const k=pendCh;pendCh=null;if(ok(k))return pickChannel(k,chs[k].name)}
     if(!ok(cur.cid)){const f=Object.entries(chs).sort(byPos).find(([id])=>ok(id));if(f)pickChannel(f[0],f[1].name)}
   });
   un.mem=onValue(ref(db,'servers/'+sid+'/members'),s=>{members=s.val()||{};drawMembers()});
@@ -1227,7 +1314,12 @@ function pickChannel(cid,name){
 
 /* ---------- Convite por link ---------- */
 const KEY=/^[-\w]{10,}$/;
-const linkOf=sid=>location.origin+location.pathname+'?convite='+sid;
+const linkOf=code=>location.origin+location.pathname+'?convite='+code;
+// código novo (invites/<código>) ou link antigo (id do servidor)
+async function resolveInvite(code){
+  try{const s=await get(ref(db,'invites/'+code));if(s.exists()){const v=s.val();return{sid:v.sid,cid:v.cid||null,role:v.role||null}}}catch{}
+  return{sid:code,cid:null,role:null};
+}
 
 function richText(text){
   const d=el('div','tx');let i=0,inv=null;
@@ -1241,30 +1333,34 @@ function richText(text){
   return [d,inv];
 }
 
-function inviteCard(sid,head=true){
+function inviteCard(code,head=true){
   const c=el('div','inv');
   if(head)c.append(el('div','invh','Você foi convidado para entrar em um servidor'));
   const row=el('div','invr'),ic=el('div','invic','…'),info=el('div','invi'),nm=el('b','','Carregando…'),ct=el('small','','\u00a0');
   const btn=el('button','b2 pri','Entrar');btn.disabled=true;
   info.append(nm,ct);row.append(ic,info,btn);c.append(row);
-  get(ref(db,'servers/'+sid)).then(s=>{
-    if(!s.exists()){ic.textContent='?';nm.textContent='Convite inválido';ct.textContent='Este servidor não existe.';btn.textContent='Entrar';return}
+  resolveInvite(code).then(async inv=>{
+    const sid=inv.sid,s=await get(ref(db,'servers/'+sid));
+    if(!s.exists()){ic.textContent='?';nm.textContent='Convite inválido';ct.textContent='Este convite não existe mais.';btn.textContent='Entrar';return}
     const v=s.val(),n=Object.keys(v.members||{}).length,joined=!!(v.members&&v.members[me.uid]);
     ic.textContent=v.name.slice(0,2).toUpperCase();nm.textContent=v.name;
-    ct.textContent=n+(n===1?' membro':' membros');
+    const bits=[n+(n===1?' membro':' membros')];
+    if(inv.cid){try{const cn=(await get(ref(db,'channels/'+sid+'/'+inv.cid+'/name'))).val();if(cn)bits.push('#'+cn)}catch{}}
+    const rn=inv.role&&v.roles&&v.roles[inv.role]&&v.roles[inv.role].name;if(rn)bits.push('Cargo: '+rn);
+    ct.textContent=bits.join(' · ');
     btn.textContent=joined?'Ir para o servidor':'Entrar';btn.disabled=false;
     btn.onclick=async()=>{
       btn.disabled=true;
-      try{if(joined){closeModal();pickServer(sid,v.name)}else await joinServer(sid)}
+      try{if(joined){closeModal();pickServer(sid,v.name,inv.cid)}else await joinServer(sid,inv)}
       catch{btn.disabled=false;ct.textContent='Não foi possível entrar. Tente de novo.'}
     };
   }).catch(()=>{nm.textContent='Convite indisponível';ct.textContent='Não foi possível carregar.';ic.textContent='?'});
   return c;
 }
-function inviteModal(sid){
-  if(!KEY.test(sid))return;
+function inviteModal(code){
+  if(!KEY.test(code))return;
   const d=view(`<div class="pad"><h2>Convite recebido</h2><p>Alguém chamou você para um servidor no Concord.</p><div class="slot"></div></div>`);
-  d.querySelector('.slot').append(inviteCard(sid,false));
+  d.querySelector('.slot').append(inviteCard(code,false));
   showModal(d);
 }
 
@@ -1610,7 +1706,7 @@ $('srvSet').onclick=()=>openServerSettings(cur.sid);
 const PERMS={view:'Ver canais',manage_server:'Gerenciar servidor',manage_channels:'Gerenciar canais',manage_roles:'Gerenciar cargos',invite:'Criar convites',
   send:'Enviar mensagens',attach:'Enviar imagens',gifs:'Enviar GIFs',polls:'Criar enquetes',audio:'Enviar mensagens de áudio',react:'Adicionar reações',manage_messages:'Gerenciar mensagens',
   administrator:'Administrador'};
-const PDESC={view:'Permite ver os canais e ler as mensagens.',manage_server:'Permite editar nome, ícone, faixa e características do servidor.',manage_channels:'Permite criar, editar, excluir e reorganizar canais e categorias.',manage_roles:'Permite criar e editar cargos e dá-los aos membros.',invite:'Permite ver e copiar o link de convite do servidor.',
+const PDESC={view:'Permite ver os canais e ler as mensagens.',manage_server:'Permite editar nome, ícone, faixa e características do servidor.',manage_channels:'Permite criar, editar, excluir e reorganizar canais e categorias.',manage_roles:'Permite criar e editar cargos e dá-los aos membros.',invite:'Permite criar convites e enviá-los para amigos e grupos.',
   send:'Permite escrever mensagens nos canais.',attach:'Permite enviar imagens, inclusive coladas.',gifs:'Permite enviar GIFs e links de GIF.',polls:'Permite criar enquetes.',audio:'Permite gravar e enviar mensagens de áudio.',react:'Permite reagir às mensagens com emojis.',manage_messages:'Permite apagar mensagens de outros membros.',
   administrator:'Concede todas as permissões e ignora as restrições de canal. Dê só a quem for de total confiança.'};
 const PGROUPS=[['Geral do servidor',['view','manage_server','manage_channels','manage_roles','invite']],['Mensagens',['send','attach','gifs','polls','audio','react','manage_messages']],['Avançado',['administrator']]];
@@ -1732,7 +1828,7 @@ function openServerSettings(sid,tab,sel,sub){
   const m=srvMeta[sid];if(!m)return;
   const own=m.owner===me.uid,ms=own||permIn(sid,me.uid,'manage_server'),mr=permIn(sid,me.uid,'manage_roles');
   if(!ms&&!mr)return;
-  const tabs=[...(ms?[['perfil','Perfil do servidor'],['convites','Convites']]:[]),...(mr?[['cargos','Cargos']]:[])];
+  const tabs=[...(ms?[['perfil','Perfil do servidor']]:[]),...(mr?[['cargos','Cargos']]:[])];
   if(!tabs.some(t=>t[0]===tab))tab=tabs[0][0];
   S.classList.remove('hidden');S.innerHTML='';
   const nav=el('nav'),sec=el('section'),c=el('div','sc wide'),x=ib('sx','x');x.setAttribute('aria-label','Fechar');x.onclick=closeSettings;
@@ -1740,8 +1836,7 @@ function openServerSettings(sid,tab,sel,sub){
   tabs.forEach(([k,n])=>nav.append(btn(n,()=>openServerSettings(sid,k),'sn'+(k===tab?' on':''))));
   if(own)nav.append(btn('Excluir servidor',()=>delServer(sid),'sn red'));
   sec.append(c);S.append(nav,sec,x);
-  if(tab==='convites'){c.append(el('h1','','Convites'),sRow('Link de convite',linkOf(sid),btn('Copiar',()=>navigator.clipboard.writeText(linkOf(sid)).then(()=>toast('Link copiado.')).catch(()=>toast('Copie manualmente: '+linkOf(sid))),'pri')))}
-  else if(tab==='cargos')srvRoles(c,sid,sel,sub);
+  if(tab==='cargos')srvRoles(c,sid,sel,sub);
   else srvProfile(c,sid);
 }
 const PAL=['#1abc9c','#2ecc71','#3498db','#9b59b6','#e91e63','#f1c40f','#e67e22','#e74c3c','#95a5a6','#607d8b','#11806a','#1f8b4c','#206694','#71368a','#ad1457','#c27c0e','#a84300','#992d22','#979c9f','#546e7a'];
